@@ -1,9 +1,9 @@
 const express = require('express')
 const router = express.Router()
-const Student = require('../models/users/students')
-const Class = require('../models/academic/classes')
-const Subclass = require('../models/academic/subclasses')
-const AcademicYear = require('../models/academic/year')
+const Student = require('../models/students')
+const Class = require('../models/classes')
+const Subclass = require('../models/subclasses')
+const AcademicYear = require('../models/year')
 const authorize = require('../functions/authorize')
 const crypto = require('crypto')
 

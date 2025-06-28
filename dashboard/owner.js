@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const Admin = require('../models/users/admins')
+const Admin = require('../models/admins')
 const authorize = require('../functions/authorize')
 
 // Create Admin

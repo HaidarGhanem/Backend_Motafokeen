@@ -1,9 +1,9 @@
 const express = require('express')
 const router = express.Router()
-const Student = require('../models/users/students.js')
-const Subclass = require('../models/academic/subclasses')
-const Class = require('../models/academic/classes')
-const Absence = require('../models/users/absence.js')
+const Student = require('../models/students.js')
+const Subclass = require('../models/subclasses.js')
+const Class = require('../models/classes.js')
+const Absence = require('../models/absence.js')
 const authorize = require('../functions/authorize')
 
 // Add this new endpoint to your absence routes

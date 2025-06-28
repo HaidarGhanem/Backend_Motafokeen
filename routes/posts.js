@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const Post = require('../models/blog/posts')
+const Post = require('../models/posts')
 
 // Get all posts
 router.get('/', async (req, res) => {

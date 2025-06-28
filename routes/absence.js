@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
-const Student = require('../models/users/students')
-const Absence = require('../models/users/absence')
+const Student = require('../models/students')
+const Absence = require('../models/absence')
 
 // Get student's own attendance data
 router.get('/', async (req, res) => {

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router()
-const { Olympics } = require('../models/academic/olympics');
+const { Olympics } = require('../models/olympics');
 
 // Create (POST) - Add a new Olympics record
 router.post('/', async (req, res) => {

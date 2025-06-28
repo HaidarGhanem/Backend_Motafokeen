@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Activity = require('../models/blog/activity');
+const Activity = require('../models/activity');
 const authorize = require('../functions/authorize'); // Assuming you have authorization
 
 // Get all activities

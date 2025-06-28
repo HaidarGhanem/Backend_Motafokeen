@@ -1,5 +1,5 @@
 const express = require('express')
-const { Olympics } = require('../models/academic/olympics')
+const { Olympics } = require('../models/olympics')
 const router = express.Router()
 
 router.get('/all', async(req,res)=>{

@@ -1,5 +1,5 @@
 const express = require('express')
-const Post = require('../models/blog/posts')
+const Post = require('../models/posts')
 const authorize = require('../functions/authorize')
 const multer = require('multer')
 

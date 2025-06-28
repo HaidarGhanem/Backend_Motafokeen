@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
-const Student = require('../models/users/students')
-const Subclass = require('../models/academic/subclasses')
+const Student = require('../models/students')
+const Subclass = require('../models/subclasses')
 
 
 // Top Students Ranked with the same SubClass

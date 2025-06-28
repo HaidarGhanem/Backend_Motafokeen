@@ -5,9 +5,9 @@ const { promisify } = require('util');
 const jwt = require('jsonwebtoken')
 const exec = promisify(require('child_process').exec);
 const router = express.Router()
-const Class = require('../models/academic/classes')
-const Subclass = require('../models/academic/subclasses')
-const Student = require('../models/users/students')
+const Class = require('../models/classes')
+const Subclass = require('../models/subclasses')
+const Student = require('../models/students')
 const JWT_SECRET = 'almotafokeen'
 
 function generateCode(){

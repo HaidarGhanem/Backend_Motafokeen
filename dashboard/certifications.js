@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const Student = require('../models/users/students')
+const Student = require('../models/students')
 const multer = require('multer')
 
 // Multer configuration for PDF uploads (50MB max)

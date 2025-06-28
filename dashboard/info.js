@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const Student = require('../models/users/students');
-const Teacher = require('../models/users/teachers');
-const Class = require('../models/academic/classes');
-const Subclass = require('../models/academic/subclasses');
-const Admin = require('../models/users/admins');
-const AcademicYear = require('../models/academic/year') // Assuming you have a User model for admins
+const Student = require('../models/students');
+const Teacher = require('../models/teachers');
+const Class = require('../models/classes');
+const Subclass = require('../models/subclasses');
+const Admin = require('../models/admins');
+const AcademicYear = require('../models/year') // Assuming you have a User model for admins
 const authorize = require('../functions/authorize');
 
 // Get all statistics

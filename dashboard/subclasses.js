@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
-const Subclass = require('../models/academic/subclasses')
-const Class = require('../models/academic/classes')
+const Subclass = require('../models/subclasses')
+const Class = require('../models/classes')
 const authorize = require('../functions/authorize')
 
 // Create

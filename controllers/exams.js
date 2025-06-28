@@ -1,5 +1,5 @@
-const Marks = require('../models/studies/marks')
-const Subject = require('../models/studies/subjects')
+const Marks = require('../models/marks')
+const Subject = require('../models/subjects')
 
 const ExamsMarks = async (studentId, classId, semester) => {
     try {

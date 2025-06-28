@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const Subject = require('../models/studies/subjects');
-const Student = require('../models/users/students');
-const Marks = require('../models/studies/marks');
-const Class = require('../models/academic/classes');
+const Subject = require('../models/subjects');
+const Student = require('../models/students');
+const Marks = require('../models/marks');
+const Class = require('../models/classes');
 
 // Create new mark
 router.post('/', async (req, res) => {

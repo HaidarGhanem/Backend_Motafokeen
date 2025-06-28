@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const Class = require('../models/academic/classes')
+const Class = require('../models/classes')
 const authorize = require('../functions/authorize')
 
 // Create

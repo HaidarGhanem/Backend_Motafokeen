@@ -1,8 +1,8 @@
 const express = require('express')
 const router = express.Router()
 const { ExamsMarks } = require('../controllers/exams')
-const Student = require('../models/users/students')
-const Marks = require('../models/studies/marks')
+const Student = require('../models/students')
+const Marks = require('../models/marks')
 
 
 

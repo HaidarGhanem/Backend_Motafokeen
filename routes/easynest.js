@@ -1,8 +1,8 @@
 const easynest = require('easynest')
 const express = require('express')
 const router = express.Router()
-const Student = require('../models/users/students');
-const Marks = require('../models/studies/marks');
+const Student = require('../models/students');
+const Marks = require('../models/marks');
 
 router.get('/', async(req,res)=>{
     try {

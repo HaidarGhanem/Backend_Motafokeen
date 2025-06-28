@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const AcademicYear = require('../models/academic/year')
+const AcademicYear = require('../models/year')
 const authorize = require('../functions/authorize')
 
 // Create

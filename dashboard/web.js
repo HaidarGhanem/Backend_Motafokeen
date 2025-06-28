@@ -1,5 +1,5 @@
 const express = require('express');
-const Web = require('../models/blog/web');
+const Web = require('../models/web');
 const multer = require('multer');
 const router = express.Router();
 

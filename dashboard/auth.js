@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
-const Admin = require('../models/users/admins')
-const Owner = require('../models/users/owner')
+const Admin = require('../models/admins')
+const Owner = require('../models/owner')
 const jwt = require('jsonwebtoken')
 
 const JWT_SECRET = process.env.PRIVATE_KEY

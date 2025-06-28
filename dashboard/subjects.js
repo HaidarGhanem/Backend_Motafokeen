@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
-const Subject = require('../models/studies/subjects')
-const Class = require('../models/academic/classes')
+const Subject = require('../models/subjects')
+const Class = require('../models/classes')
 const authorize = require('../functions/authorize')
 
 // Get all classes for dropdown

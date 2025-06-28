@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const Schedule = require('../models/studies/schedule');
-const Class = require('../models/academic/classes');
-const Subclass = require('../models/academic/subclasses');
+const Schedule = require('../models/schedule');
+const Class = require('../models/classes');
+const Subclass = require('../models/subclasses');
 
 // Create a new schedule for a subclass
 router.post('/', async (req, res) => {

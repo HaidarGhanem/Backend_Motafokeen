@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const Teacher = require('../models/users/teachers')
+const Teacher = require('../models/teachers')
 const authorize = require('../functions/authorize')
 
 // Create 
