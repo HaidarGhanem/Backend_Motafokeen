@@ -37,9 +37,9 @@ router.get('/admin', async (req, res) => {
 })
 
 // Update Admin
-router.put('/:name', async (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
-        const admin = await Admin.findOneAndUpdate({name: req.params.name}, req.body , { new: true , runValidation: true})
+        const admin = await Admin.findOneAndUpdate({_id : req.params.id}, req.body , { new: true , runValidation: true})
         res.status(200).json({success: true , data: admin , message: 'تم تعديل معلومات الآدمن بنجاح'})
     } catch (error) {
         res.status(400).json({success: false , data: error.message , message: 'مشكلة في استدعاء قائمة الآدمن'})
