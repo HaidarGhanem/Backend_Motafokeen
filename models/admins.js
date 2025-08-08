@@ -12,6 +12,21 @@ const adminSchema = new mongoose.Schema({
     role: { 
         type: String, 
         required: true 
+    },
+    first_name:{ 
+        type: String, 
+        required: true 
+    },
+    last_name:{ 
+        type: String, 
+        required: true 
+    },
+    phone_number:{
+        type: String
+    },
+    position:{
+        type: String,
+        required: true
     }
 })
 

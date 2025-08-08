@@ -14,7 +14,14 @@ const academicYearSchema = new mongoose.Schema({
         type: Date, 
         required: true 
     },
-    endDate: { type: Date, required: true },
+    endDate: { 
+        type: Date, 
+        required: true 
+    },
+    active: {
+        type: Number,
+        default: 0
+    }
 })
 
 const AcademicYear = mongoose.model('AcademicYear', academicYearSchema)

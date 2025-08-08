@@ -100,55 +100,82 @@ router.get('/', async (req, res) => {
 
 // Create student
 router.post('/', async (req, res) => {
-    try {
-        const { firstName, middleName, lastName, email, classId, subclassId, academicYearId } = req.body;
+  try {
+    const {
+      firstName, middleName, lastName, email,
+      classId, subclassId, academicYearId,
+      gender, nationality, city, birthDate,
+      father_name, mother_name
+    } = req.body;
 
-        // Generate unique identifier
-        let identifier;
-        let isUnique = false;
-        
-        while (!isUnique) {
-            identifier = generateIdentifier();
-            const existingStudent = await Student.findOne({ identifier });
-            if (!existingStudent) {
-                isUnique = true;
-            }
-        }
-
-        const password = generateIdentifier();
-        const newStudent = new Student({
-            firstName,
-            middleName,
-            lastName,
-            email,
-            password,
-            classId,
-            subclassId,
-            academicYearId,
-            identifier,
-            role: 'student'
-        });
-
-        await newStudent.save();
-        
-        res.status(201).json({
-            success: true,
-            data: {
-                ...newStudent.toObject(),
-                password // Include password in response
-            },
-            message: 'Student created successfully'
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create student',
-            error: error.message
-        });
+    // Validate required fields
+    if (!firstName || !lastName || !email || !classId || !subclassId || !academicYearId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields'
+      });
     }
-});
 
+    const studentCount = await Student.countDocuments({ subclassId });
+    if (studentCount >= 35) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subclass is full'
+      });
+    }
+
+    // Generate unique identifier
+    let identifier;
+    let isUnique = false;
+    while (!isUnique) {
+      identifier = generateIdentifier();
+      const existingStudent = await Student.findOne({ identifier });
+      if (!existingStudent) {
+        isUnique = true;
+      }
+    }
+
+    const password = generateIdentifier();
+
+    const newStudent = new Student({
+      firstName,
+      middleName,
+      lastName,
+      email,
+      password,
+      classId,
+      subclassId,
+      academicYearId,
+      identifier,
+      gender,
+      nationality,
+      city,
+      birthDate: birthDate ? new Date(birthDate) : undefined,
+      father_name,  // Only if schema allows optional
+      mother_name,  // Only if schema allows optional
+      role: 'student'
+    });
+
+    await newStudent.save();
+
+    res.status(201).json({
+      success: true,
+      data: {
+        ...newStudent.toObject(),
+        password // Include password in response
+      },
+      message: 'Student created successfully'
+    });
+
+  } catch (error) {
+    console.error('Create student error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create student',
+      error: error.message
+    });
+  }
+});
 // Update student
 router.put('/:id', async (req, res) => {
     try {

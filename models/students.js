@@ -51,9 +51,32 @@ const studentSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    father_name: {
+        type: String,
+        default: '',
+        required: false
+    },
+    mother_name: {
+        type: String,
+        default: '',
+        required: false
+    },
     absence: {
         type: Number,
         default: 0
+    },
+    nationality: {
+        type: String,
+        default: "عربي سوري"
+    },
+    gender: {
+        type: String
+    },
+    birthDate: {
+        type: Date
+    },
+    city: {
+        type: String
     },
     certificate: { 
         name: { 

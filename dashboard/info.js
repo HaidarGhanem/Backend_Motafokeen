@@ -68,4 +68,88 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Add this new route to your existing router file
+router.get('/student-demographics', async (req, res) => {
+    try {
+        // 1. Get total student count for percentages
+        const totalStudents = await Student.countDocuments();
+        
+        // 2. Get gender distribution
+        const genderStats = await Student.aggregate([
+            {
+                $match: {
+                    gender: { $in: ["ذكر", "أنثى"] }
+                }
+            },
+            {
+                $group: {
+                    _id: "$gender",
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $project: {
+                    gender: "$_id",
+                    count: 1,
+                    percentage: {
+                        $round: [
+                            { $multiply: [{ $divide: ["$count", totalStudents] }, 100] },
+                            1
+                        ]
+                    },
+                    _id: 0
+                }
+            }
+        ]);
+
+        // 3. Get city distribution
+        const cityStats = await Student.aggregate([
+            {
+                $match: {
+                    city: { $exists: true, $ne: "" }
+                }
+            },
+            {
+                $group: {
+                    _id: "$city",
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { count: -1 }
+            },
+            {
+                $project: {
+                    city: "$_id",
+                    count: 1,
+                    percentage: {
+                        $round: [
+                            { $multiply: [{ $divide: ["$count", totalStudents] }, 100] },
+                            1
+                        ]
+                    },
+                    _id: 0
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalStudents,
+                genderDistribution: genderStats,
+                cityDistribution: cityStats
+            }
+        });
+
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;

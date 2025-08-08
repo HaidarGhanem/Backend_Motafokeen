@@ -13,7 +13,8 @@ const postSchema = new mongoose.Schema({
         contentType: String
     },
     date: {
-        type: Date
+        type: Date,
+        default: Date.now()
     },
     writer: {
         type: String,

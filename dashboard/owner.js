@@ -6,8 +6,8 @@ const authorize = require('../functions/authorize')
 // Create Admin
 router.post('/',  async (req, res) => {
     try {
-        const { name , password } = req.body
-        const admin = new Admin({ name , password, role : 'admin'})
+        const { name , password, first_name , last_name , phone_number , position} = req.body
+        const admin = new Admin({ name , password, role : 'admin', first_name , last_name , phone_number, position})
         await admin.save();
         res.status(201).json({success: true , data: admin , message: 'تم إنشاء الآدمن بنجاح'})
     } catch (error) {

@@ -6,7 +6,7 @@ const authorize = require('../functions/authorize')
 // Create
 router.post('/', async (req, res) => {
     try {
-        const newClass = new Class({name: req.body.name})
+        const newClass = new Class({name: req.body.name })
         await newClass.save()
         res.status(201).json({success: true , data: newClass , message: 'تم إنشاء الصف بنجاح'})
     } catch (error) {
