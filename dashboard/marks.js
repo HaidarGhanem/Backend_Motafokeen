@@ -228,5 +228,60 @@ router.delete('/:id', async (req, res) => {
         });
     }
 });
+// Get marks with flexible filters
+router.post('/search', async (req, res) => {
+    try {
+        const { id, class: className, semester, subject } = req.body;
+
+        let marksQuery = {};
+
+        // If searching by Student ID
+        if (id && id.trim() !== '') {
+            const studentInfo = await Student.findOne({ identifier: id.trim() });
+            if (!studentInfo) {
+                return res.status(404).json({ success: false, message: 'Student not found' });
+            }
+            marksQuery.studentId = studentInfo._id;
+        }
+
+        // If filtering by Class + Semester (+ optional Subject)
+        if (className && className.trim() !== '' && semester) {
+            const classInfo = await Class.findOne({ name: className.trim() });
+            if (!classInfo) {
+                return res.status(404).json({ success: false, message: 'Class not found' });
+            }
+
+            // Get subjects in this class/semester
+            let subjectFilter = { classId: classInfo._id, semester };
+            if (subject && subject.trim() !== '') {
+                subjectFilter.name = subject.trim();
+            }
+
+            const subjectDocs = await Subject.find(subjectFilter);
+            if (!subjectDocs || subjectDocs.length === 0) {
+                return res.status(404).json({ success: false, message: 'No subjects found matching criteria' });
+            }
+
+            // Filter marks by these subject IDs
+            marksQuery.subjectId = { $in: subjectDocs.map(s => s._id) };
+        }
+
+        // Fetch marks (empty query means all marks)
+        const marks = await Marks.find(marksQuery)
+            .populate('studentId', 'firstName lastName identifier')
+            .populate('subjectId', 'name semester classId');
+
+        res.status(200).json({
+            success: true,
+            data: marks,
+            message: 'Marks retrieved successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch marks: ' + error.message
+        });
+    }
+});
 
 module.exports = router;

@@ -82,7 +82,7 @@ router.get('/', async (req, res) => {
             .populate('classId', 'name')
             .populate('subclassId', 'name')
             .populate('academicYearId', 'year')
-            .select('firstName middleName lastName email password identifier classId subclassId academicYearId');
+            .select('firstName middleName lastName email password identifier classId subclassId academicYearId gender nationality city birthDate father_name mother_name');
             
         res.status(200).json({
             success: true,
@@ -137,6 +137,9 @@ router.post('/', async (req, res) => {
 
     const password = generateIdentifier();
 
+    // Use default nationality if empty or missing
+    const finalNationality = nationality && nationality.trim() !== '' ? nationality : "عربي سوري";
+
     const newStudent = new Student({
       firstName,
       middleName,
@@ -148,11 +151,11 @@ router.post('/', async (req, res) => {
       academicYearId,
       identifier,
       gender,
-      nationality,
+      nationality: finalNationality,
       city,
       birthDate: birthDate ? new Date(birthDate) : undefined,
-      father_name,  // Only if schema allows optional
-      mother_name,  // Only if schema allows optional
+      father_name,
+      mother_name,
       role: 'student'
     });
 
@@ -176,6 +179,7 @@ router.post('/', async (req, res) => {
     });
   }
 });
+
 // Update student
 router.put('/:id', async (req, res) => {
     try {
@@ -183,10 +187,11 @@ router.put('/:id', async (req, res) => {
             req.params.id,
             req.body,
             { new: true }
-        ).populate('classId', 'name')
-         .populate('subclassId', 'name')
-         .populate('academicYearId', 'year')
-         .select('firstName middleName lastName email password identifier classId subclassId academicYearId');
+        )
+        .populate('classId', 'name')
+        .populate('subclassId', 'name')
+        .populate('academicYearId', 'year')
+        .select('firstName middleName lastName email password identifier classId subclassId academicYearId gender nationality city birthDate father_name mother_name');
         
         if (!updatedStudent) {
             return res.status(404).json({
