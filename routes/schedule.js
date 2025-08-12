@@ -2,9 +2,9 @@ const express = require('express')
 const router = express.Router()
 const Schedule = require('../models/schedule')
 
-router.get('/', async (req, res) => {
+router.get('/:day', async (req, res) => {
     try {
-        const { day } = req.body
+        const day = req.params.day
         const schedule = await Schedule.findOne({ 
             subclassId: req.session.user.subclass,
             'schedules.day': day

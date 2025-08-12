@@ -11,9 +11,9 @@ router.get('/all', async(req,res)=>{
     }
 })
 
-router.get('/', async(req,res)=>{
+router.get('/:id', async(req,res)=>{
     try {
-        const result = await Olympics.findById({_id : req.body.id})
+        const result = await Olympics.findById({_id : req.params.id})
         res.status(200).send(result)
     } catch (error) {
         res.status(500).send({message: 'internal server error'})
