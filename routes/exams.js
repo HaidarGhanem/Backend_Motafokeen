@@ -1,23 +1,46 @@
 const express = require('express')
 const router = express.Router()
 const { ExamsMarks } = require('../controllers/exams')
+const Subject = require('../models/subjects')
 const Student = require('../models/students')
 const Marks = require('../models/marks')
 
-
-
-router.get('/',  async (req, res) => {
+router.get('/', async (req, res) => {
     try {
-            const marks = await Marks.find({ studentId: req.session.user.id })
-            .populate('subjectId', 'name semester')
-            res.status(200).json({success: true , data: marks , percentage: req.session.user.average , message: 'تم استدعاء علامات الطالب بنجاح' })
-        } catch (error) {
-            console.error(error)
-            res.status(500).json({success: false , data: error.message , message:'فشل في استدعاء علامات الطالب'})
+        const semester = req.headers['semester'];
+        
+        if (!semester) {
+            return res.status(400).json({
+                success: false,
+                message: 'يجب تحديد الفصل الدراسي في رأس الطلب'
+            });
         }
-})
+        const subjectsInSemester = await Subject.find({ 
+            semester: semester 
+        }).select('_id');
 
-//Download Certification
+        const marks = await Marks.find({ 
+            studentId: req.session.user.id,
+            subjectId: { $in: subjectsInSemester.map(sub => sub._id) }
+        }).populate('subjectId', 'name semester');
+        
+        res.status(200).json({
+            success: true,
+            data: marks,
+            percentage: req.session.user.average,
+            message: 'تم استدعاء علامات الطالب بنجاح'
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            data: error.message,
+            message: 'فشل في استدعاء علامات الطالب'
+        });
+    }
+});
+
+
 router.get('/download-cert', async (req, res) => {
     try {
         const student = await Student.findById(req.session.user.id)
