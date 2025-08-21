@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const Activity = require('../models/activity');
-const authorize = require('../functions/authorize'); // Assuming you have authorization
+const Student = require('../models/students'); // ✅ make sure this file exports mongoose.model('Students', schema)
 
 // Get all activities
 router.get('/', async (req, res) => {
     try {
-        const activities = await Activity.find();
+        const activities = await Activity.find().populate({
+            path: 'members.students',
+            select: 'firstName middleName lastName identifier phoneNumber'
+        });
         res.status(200).json({
             success: true,
             data: activities,
@@ -24,7 +27,10 @@ router.get('/', async (req, res) => {
 // Get a single activity by ID
 router.get('/:id', async (req, res) => {
     try {
-        const activity = await Activity.findById(req.params.id);
+        const activity = await Activity.findById(req.params.id).populate({
+            path: 'members.students',
+            select: 'firstName middleName lastName identifier phoneNumber'
+        });
         res.status(200).json({
             success: true,
             data: activity,
@@ -115,13 +121,13 @@ router.get('/members/:id', async (req, res) => {
             });
         }
 
-        // Format the members data
+        // Format members data
         const formattedMembers = activity.members.map(member => ({
             student: member.students ? {
                 _id: member.students._id,
                 fullName: `${member.students.firstName} ${member.students.middleName} ${member.students.lastName}`,
-                email: member.students.email,
                 identifier: member.students.identifier,
+                email: member.students.email,
                 picture: member.students.picture,
                 classId: member.students.classId,
                 subclassId: member.students.subclassId
@@ -134,7 +140,7 @@ router.get('/members/:id', async (req, res) => {
             success: true,
             data: {
                 activityTitle: activity.title,
-                members: formattedMembers.filter(m => m.student !== null) // Filter out null students
+                members: formattedMembers.filter(m => m.student !== null)
             },
             message: 'Members retrieved successfully'
         });
@@ -147,6 +153,5 @@ router.get('/members/:id', async (req, res) => {
         });
     }
 });
-
 
 module.exports = router;

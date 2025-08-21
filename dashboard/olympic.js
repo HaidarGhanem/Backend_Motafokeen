@@ -1,15 +1,16 @@
 const express = require('express');
-const router = express.Router()
+const router = express.Router();
 const { Olympics } = require('../models/olympics');
 
 // Create (POST) - Add a new Olympics record
 router.post('/', async (req, res) => {
     try {
-        const { name, class: className, level, nextdate, teacher, achievements, skills } = req.body;
+        const { name, class: className, subject, level, nextdate, teacher, achievements, skills } = req.body;
         
         const olympics = new Olympics({
             name,
             class: className,
+            subject, // ✅ new required field
             level,
             nextdate,
             teacher,
@@ -22,20 +23,20 @@ router.post('/', async (req, res) => {
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
-})
+});
 
 // Read (GET) - Get all Olympics records
-router.get('/all' , async (req, res) => {
+router.get('/all', async (req, res) => {
     try {
         const olympics = await Olympics.find();
         res.json(olympics);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-})
+});
 
 // Read (GET) - Get a single Olympics record by ID
-router.get('/', async (req, res) => {
+router.get('/:id', async (req, res) => {  // ✅ fixed route
     try {
         const olympics = await Olympics.findById(req.params.id);
         if (!olympics) {
@@ -45,18 +46,19 @@ router.get('/', async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-})
+});
 
 // Update (PUT) - Update an Olympics record
 router.put('/:id', async (req, res) => {
     try {
-        const { name, class: className, level, nextdate, teacher, achievements, skills } = req.body;
+        const { name, class: className, subject, level, nextdate, teacher, achievements, skills } = req.body;
         
         const updatedOlympics = await Olympics.findByIdAndUpdate(
             req.params.id,
             {
                 name,
                 class: className,
+                subject, // ✅ include subject in update
                 level,
                 nextdate,
                 teacher,
@@ -73,7 +75,7 @@ router.put('/:id', async (req, res) => {
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
-})
+});
 
 // Delete (DELETE) - Delete an Olympics record
 router.delete('/:id', async (req, res) => {
@@ -86,6 +88,6 @@ router.delete('/:id', async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-})
+});
 
 module.exports = router;

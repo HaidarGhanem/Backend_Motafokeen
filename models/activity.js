@@ -22,7 +22,7 @@ const activitySchema = new mongoose.Schema({
         type: Date
     },
     members: [
-        {students: { type: mongoose.Schema.Types.ObjectId, ref: 'Students' }, 
+        {students: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' }, 
         phoneNumber: { type: String },
         joinedAt: { type: Date, default: Date.now }
         }

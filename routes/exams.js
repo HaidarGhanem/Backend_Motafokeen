@@ -4,10 +4,12 @@ const { ExamsMarks } = require('../controllers/exams')
 const Subject = require('../models/subjects')
 const Student = require('../models/students')
 const Marks = require('../models/marks')
+const mongoose = require('mongoose')
 
 router.get('/', async (req, res) => {
     try {
         const semester = req.headers['semester'];
+        const studentId = req.headers['studentid']; 
         
         if (!semester) {
             return res.status(400).json({
@@ -20,7 +22,7 @@ router.get('/', async (req, res) => {
         }).select('_id');
 
         const marks = await Marks.find({ 
-            studentId: req.session.user.id,
+            studentId: new mongoose.Types.ObjectId(studentId),
             subjectId: { $in: subjectsInSemester.map(sub => sub._id) }
         }).populate('subjectId', 'name semester');
         
@@ -43,7 +45,7 @@ router.get('/', async (req, res) => {
 
 router.get('/download-cert', async (req, res) => {
     try {
-        const student = await Student.findById(req.session.user.id)
+        const student = await Student.findById(req.headers['studentid'])
         if (!student) return res.status(404).json({ error: "Student not found" })
         if (!student.certificate.data) return res.status(404).json({ error: "No certificate found" })
 

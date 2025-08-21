@@ -6,7 +6,7 @@ const Absence = require('../models/absence')
 // Get student's own attendance data
 router.get('/', async (req, res) => {
     try {
-        const studentId = req.session.user.id
+        const studentId = req.headers['studentid'];
         
         // 1. Get student's basic info and counts
         const student = await Student.findById(studentId)

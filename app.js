@@ -35,9 +35,6 @@ app.use('/api/absence' , require('./routes/absence'))
 app.use('/api/olympics' , require('./routes/olympics'))
 
 
-//Test
-app.use('/test' , require('./routes/easynest'))
-
 //Dashboard
 app.use('/dashboard/auth' , require('./dashboard/auth'))
 app.use('/dashboard/admins' , require('./dashboard/owner'))

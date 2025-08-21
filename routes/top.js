@@ -7,7 +7,7 @@ const Subclass = require('../models/subclasses')
 // Top Students Ranked with the same SubClass
 router.get('/', async (req, res) => {
     try {
-        const subclassId = req.session.user.subclass;
+        const subclassId = req.headers['subclassid']
         
         // First verify subclass exists
         const subclassExists = await Subclass.findById({_id: subclassId});
@@ -74,7 +74,7 @@ router.get('/', async (req, res) => {
 // Get ranked students within a specific class
 router.get('/class', async (req, res) => {
     try {
-        const classId = req.session.user.class;
+        const classId = req.headers['classid'];
         const limit = parseInt(req.query.limit) || 50 // Default top 50
 
         const rankedStudents = await Student.find({ 
