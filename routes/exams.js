@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
         res.status(200).json({
             success: true,
             data: marks,
-            percentage: req.session.user.average,
+            // percentage: req.session.user.average,
             message: 'تم استدعاء علامات الطالب بنجاح'
         });
     } catch (error) {
