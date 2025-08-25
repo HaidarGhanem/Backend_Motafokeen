@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Activity = require('../models/activity');
-const Student = require('../models/students'); // ✅ make sure this file exports mongoose.model('Students', schema)
-
-// Get all activities
+const Student = require('../models/students'); 
 router.get('/', async (req, res) => {
     try {
         const activities = await Activity.find().populate({
@@ -24,7 +22,6 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Get a single activity by ID
 router.get('/:id', async (req, res) => {
     try {
         const activity = await Activity.findById(req.params.id).populate({
@@ -45,7 +42,6 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create a new activity
 router.post('/', async (req, res) => {
     try {
         const newActivity = new Activity(req.body);
@@ -64,7 +60,6 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Update an activity
 router.put('/:id', async (req, res) => {
     try {
         const updatedActivity = await Activity.findByIdAndUpdate(
@@ -86,7 +81,6 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// Delete an activity
 router.delete('/:id', async (req, res) => {
     try {
         await Activity.findByIdAndDelete(req.params.id);
@@ -104,7 +98,6 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// Get activity members with full student details
 router.get('/members/:id', async (req, res) => {
     try {
         const activity = await Activity.findById(req.params.id)
@@ -121,7 +114,6 @@ router.get('/members/:id', async (req, res) => {
             });
         }
 
-        // Format members data
         const formattedMembers = activity.members.map(member => ({
             student: member.students ? {
                 _id: member.students._id,

@@ -30,6 +30,24 @@ router.post('/all', async (req, res) => {
     }
 })
 
+// Get subclasses by class
+router.get('/by-class/:id', async (req, res) => {
+    try {
+        const classInfo = await Class.findOne({ _id: req.params.id });
+        if (!classInfo) {
+            return res.status(404).json({
+                success: false,
+                message: 'Class not found'
+            });
+        }
+        
+        const subclasses = await Subclass.find({ classId: classInfo._id }).populate('classId');
+        res.status(200).json({success: true , data: subclasses , message: 'تم استدعاء شعب الصف بنجاح'})
+    } catch (error) {
+        res.status(500).json({success: false , data: error.message , message: 'مشكلة في استدعاء شعب الصف'})
+    }
+})
+
 // Read subclass for a class
 router.get('/class', async (req, res) => {
     try {

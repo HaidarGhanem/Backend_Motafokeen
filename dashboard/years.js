@@ -46,28 +46,58 @@ router.delete('/', async (req, res) => {
     }
 })
 
-// Active
-router.put('active/:year', async (req, res) => {
+// Activate
+router.put('/active/:id', async (req, res) => {
     try {
+        // deactivate all other years
         await AcademicYear.updateMany(
-            { active: 1, year: { $ne: req.params.year } }, 
-            { $set: { active: 0 } } 
+            { active: 1, _id: { $ne: req.params.id } },
+            { $set: { active: 0 } }
         );
-        const updatedYear = await AcademicYear.findOneAndUpdate({year: req.params.year}, {active: 1} , { new: true })
-        res.status(200).json({success: true , data: updatedYear , message: 'تم تفعيل السنة الدراسية بنجاح'})
+
+        // activate this year
+        const updatedYear = await AcademicYear.findOneAndUpdate(
+            { _id: req.params.id },
+            { active: 1 },
+            { new: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            data: updatedYear,
+            message: 'تم تفعيل السنة الدراسية بنجاح'
+        });
     } catch (error) {
-        res.status(500).json({success: false , data: error.message , message: 'مشكلة في تفعيل السنة الدراسية'})
+        res.status(500).json({
+            success: false,
+            data: error.message,
+            message: 'مشكلة في تفعيل السنة الدراسية'
+        });
     }
-})
+});
 
 // Deactivate
-router.put('deactivate/:year', async (req, res) => {
+router.put('/deactivate/:id', async (req, res) => {
     try {
-        const updatedYear = await AcademicYear.findOneAndUpdate({year: req.params.year}, {active: 0} , { new: true })
-        res.status(200).json({success: true , data: updatedYear , message: 'تم إلغاء تفعيل السنة الدراسية بنجاح'})
+        const updatedYear = await AcademicYear.findOneAndUpdate(
+            { _id: req.params.id },
+            { active: 0 },
+            { new: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            data: updatedYear,
+            message: 'تم إلغاء تفعيل السنة الدراسية بنجاح'
+        });
     } catch (error) {
-        res.status(500).json({success: false , data: error.message , message: "مشكلة في إلغاء تفعيل السنة الدراسية"})
+        res.status(500).json({
+            success: false,
+            data: error.message,
+            message: "مشكلة في إلغاء تفعيل السنة الدراسية"
+        });
     }
-})
+});
+
 
 module.exports = router

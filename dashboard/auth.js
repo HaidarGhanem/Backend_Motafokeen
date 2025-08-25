@@ -56,7 +56,7 @@ router.post('/login' , async(req,res)=>{
 router.post('/logout' , (req, res) => {
     req.session.destroy(err => {
         if (err) return res.status(500).json({ message: 'خطأ بتسجيل الخروج' });
-        res.clearCookie('connect.sid'); // optional: name may vary
+        res.clearCookie('connect.sid'); 
         return res.json({ message: 'تم تسجيل الخروج بنجاح' });
     });
 });

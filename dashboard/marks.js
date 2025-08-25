@@ -10,7 +10,6 @@ router.post('/', async (req, res) => {
     try {
         const { id, class: className, subject, firstQuiz, secondQuiz, finalExam } = req.body;
 
-
         const studentInfo = await Student.findOne({ identifier: id });
         if (!studentInfo) {
             return res.status(404).json({
@@ -38,6 +37,19 @@ router.post('/', async (req, res) => {
             });
         }
 
+        // Check if mark already exists for this student and subject
+        const existingMark = await Marks.findOne({
+            studentId: studentInfo._id,
+            subjectId: subjectInfo._id
+        });
+
+        if (existingMark) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mark already exists for this student and subject'
+            });
+        }
+
         const newMark = new Marks({
             firstQuiz,
             secondQuiz,
@@ -56,98 +68,6 @@ router.post('/', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to create mark: ' + error.message
-        });
-    }
-});
-
-// Get marks by student ID
-router.post('/student', async (req, res) => {
-    try {
-        const { id } = req.body;
-
-        if (!id) {
-            return res.status(400).json({
-                success: false,
-                message: 'Student ID is required'
-            });
-        }
-
-        const studentInfo = await Student.findOne({ identifier: id });
-        if (!studentInfo) {
-            return res.status(404).json({
-                success: false,
-                message: 'Student not found'
-            });
-        }
-
-        const marks = await Marks.find({ studentId: studentInfo._id })
-            .populate('studentId', 'firstName lastName identifier')
-            .populate('subjectId', 'name semester classId');
-
-        res.status(200).json({
-            success: true,
-            data: marks,
-            message: 'Marks retrieved successfully'
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch marks: ' + error.message
-        });
-    }
-});
-
-
-// Get marks by subject
-router.post('/subject', async (req, res) => {
-    try {
-        const { class: className, semester, subject } = req.body;
-
-        if (!className || !semester) {
-            return res.status(400).json({
-                success: false,
-                message: 'Class and semester are required'
-            });
-        }
-
-        const classInfo = await Class.findOne({ name: className });
-        if (!classInfo) {
-            return res.status(404).json({
-                success: false,
-                message: 'Class not found'
-            });
-        }
-
-        const query = { 
-            classId: classInfo._id,
-            semester 
-        };
-
-        if (subject) {
-            query.name = subject;
-        }
-
-        const subjectInfo = await Subject.findOne(query);
-        if (!subjectInfo) {
-            return res.status(404).json({
-                success: false,
-                message: 'Subject not found'
-            });
-        }
-
-        const marks = await Marks.find({ subjectId: subjectInfo._id })
-            .populate('studentId', 'firstName lastName identifier')
-            .populate('subjectId', 'name semester classId');
-
-        res.status(200).json({
-            success: true,
-            data: marks,
-            message: 'Marks retrieved successfully'
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch marks: ' + error.message
         });
     }
 });
@@ -173,7 +93,7 @@ router.put('/:id', async (req, res) => {
             new: true,
             runValidators: true
         })
-        .populate('studentId', 'firstName lastName identifier')
+        .populate('studentId', 'firstName middleName lastName identifier')
         .populate('subjectId', 'name semester classId');
 
         if (!updatedMark) {
@@ -228,48 +148,67 @@ router.delete('/:id', async (req, res) => {
         });
     }
 });
+
 // Get marks with flexible filters
 router.post('/search', async (req, res) => {
     try {
-        const { id, class: className, semester, subject } = req.body;
+        const { id, firstName, middleName, lastName, class: className, semester, subject } = req.body;
 
-        let marksQuery = {};
+        let query = {};
 
-        // If searching by Student ID
-        if (id && id.trim() !== '') {
-            const studentInfo = await Student.findOne({ identifier: id.trim() });
-            if (!studentInfo) {
-                return res.status(404).json({ success: false, message: 'Student not found' });
+        // Build student query if any student filters are provided
+        let studentQuery = {};
+        if (id && id.trim() !== '') studentQuery.identifier = id.trim();
+        if (firstName && firstName.trim() !== '') studentQuery.firstName = new RegExp(firstName.trim(), 'i');
+        if (middleName && middleName.trim() !== '') studentQuery.middleName = new RegExp(middleName.trim(), 'i');
+        if (lastName && lastName.trim() !== '') studentQuery.lastName = new RegExp(lastName.trim(), 'i');
+
+        // If we have student filters, find matching students first
+        if (Object.keys(studentQuery).length > 0) {
+            const students = await Student.find(studentQuery);
+            if (students.length === 0) {
+                return res.status(200).json({
+                    success: true,
+                    data: [],
+                    message: 'No marks found matching criteria'
+                });
             }
-            marksQuery.studentId = studentInfo._id;
+            query.studentId = { $in: students.map(s => s._id) };
         }
 
-        // If filtering by Class + Semester (+ optional Subject)
-        if (className && className.trim() !== '' && semester) {
+        // Build subject query if class/semester/subject filters are provided
+        if (className && className.trim() !== '') {
             const classInfo = await Class.findOne({ name: className.trim() });
             if (!classInfo) {
-                return res.status(404).json({ success: false, message: 'Class not found' });
+                return res.status(404).json({ 
+                    success: false, 
+                    message: 'Class not found' 
+                });
             }
 
-            // Get subjects in this class/semester
-            let subjectFilter = { classId: classInfo._id, semester };
-            if (subject && subject.trim() !== '') {
-                subjectFilter.name = subject.trim();
-            }
+            let subjectQuery = { classId: classInfo._id };
+            if (semester) subjectQuery.semester = parseInt(semester);
+            if (subject && subject.trim() !== '') subjectQuery.name = subject.trim();
 
-            const subjectDocs = await Subject.find(subjectFilter);
-            if (!subjectDocs || subjectDocs.length === 0) {
-                return res.status(404).json({ success: false, message: 'No subjects found matching criteria' });
+            const subjects = await Subject.find(subjectQuery);
+            if (subjects.length === 0) {
+                return res.status(200).json({
+                    success: true,
+                    data: [],
+                    message: 'No subjects found matching criteria'
+                });
             }
-
-            // Filter marks by these subject IDs
-            marksQuery.subjectId = { $in: subjectDocs.map(s => s._id) };
+            
+            // Add subject filter to main query
+            if (!query.subjectId) query.subjectId = {};
+            query.subjectId.$in = subjects.map(s => s._id);
         }
 
-        // Fetch marks (empty query means all marks)
-        const marks = await Marks.find(marksQuery)
-            .populate('studentId', 'firstName lastName identifier')
-            .populate('subjectId', 'name semester classId');
+        // Fetch marks with populated data
+        const marks = await Marks.find(query)
+            .populate('studentId', 'firstName middleName lastName identifier')
+            .populate('subjectId', 'name semester classId')
+            .sort({ 'studentId.lastName': 1, 'subjectId.name': 1 });
 
         res.status(200).json({
             success: true,

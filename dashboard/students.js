@@ -4,20 +4,16 @@ const Student = require('../models/students')
 const Class = require('../models/classes')
 const Subclass = require('../models/subclasses')
 const AcademicYear = require('../models/year')
-const authorize = require('../functions/authorize')
 const crypto = require('crypto')
 
 function generateIdentifier() {
     return crypto.randomInt(10000, 99999).toString()
 }
 
-// Get all classes with their subclasses and academic years for dropdowns
 router.get('/options', async (req, res) => {
     try {
         const classes = await Class.find({}, 'name');
         const academicYears = await AcademicYear.find({}, 'year');
-        
-        // Get subclasses grouped by class
         const classesWithSubclasses = await Promise.all(classes.map(async (cls) => {
             const subclasses = await Subclass.find({ classId: cls._id }, 'name');
             return {
@@ -25,7 +21,6 @@ router.get('/options', async (req, res) => {
                 subclasses
             };
         }));
-        
         res.status(200).json({
             success: true,
             data: {
@@ -43,30 +38,35 @@ router.get('/options', async (req, res) => {
     }
 });
 
-// Get students with filters
 router.get('/', async (req, res) => {
     try {
         const { classId, subclassId } = req.query;
         let query = {};
 
+        // Get the active academic year
+        const activeAcademicYear = await AcademicYear.findOne({ active: 1 });
+        if (!activeAcademicYear) {
+            return res.status(404).json({
+                success: false,
+                message: 'No active academic year found'
+            });
+        }
+
+        // Always include academicYearId condition for active year
+        query.academicYearId = activeAcademicYear._id;
+
         if (classId && subclassId) {
-            // Get students by class and subclass
             const classInfo = await Class.findById(classId);
             const subclassInfo = await Subclass.findById(subclassId);
-            
             if (!classInfo || !subclassInfo) {
                 return res.status(404).json({
                     success: false,
                     message: 'Class or subclass not found'
                 });
             }
-
-            query = { 
-                classId: classInfo._id,
-                subclassId: subclassInfo._id
-            };
+            query.classId = classInfo._id;
+            query.subclassId = subclassInfo._id;
         } else if (classId) {
-            // Get students by class only
             const classInfo = await Class.findById(classId);
             if (!classInfo) {
                 return res.status(404).json({
@@ -74,16 +74,15 @@ router.get('/', async (req, res) => {
                     message: 'Class not found'
                 });
             }
-            query = { classId: classInfo._id };
+            query.classId = classInfo._id;
         }
-        // If no filters, get all students
 
         const students = await Student.find(query)
             .populate('classId', 'name')
             .populate('subclassId', 'name')
             .populate('academicYearId', 'year')
             .select('firstName middleName lastName email password identifier classId subclassId academicYearId gender nationality city birthDate father_name mother_name');
-            
+        
         res.status(200).json({
             success: true,
             data: students,
@@ -98,89 +97,76 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Create student
 router.post('/', async (req, res) => {
-  try {
-    const {
-      firstName, middleName, lastName, email,
-      classId, subclassId, academicYearId,
-      gender, nationality, city, birthDate,
-      father_name, mother_name
-    } = req.body;
-
-    // Validate required fields
-    if (!firstName || !lastName || !email || !classId || !subclassId || !academicYearId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields'
-      });
-    }
-
-    const studentCount = await Student.countDocuments({ subclassId });
-    if (studentCount >= 35) {
-      return res.status(400).json({
-        success: false,
-        message: 'Subclass is full'
-      });
-    }
-
-    // Generate unique identifier
-    let identifier;
-    let isUnique = false;
-    while (!isUnique) {
-      identifier = generateIdentifier();
-      const existingStudent = await Student.findOne({ identifier });
-      if (!existingStudent) {
-        isUnique = true;
-      }
-    }
-
-    const password = generateIdentifier();
-
-    // Use default nationality if empty or missing
-    const finalNationality = nationality && nationality.trim() !== '' ? nationality : "عربي سوري";
-
-    const newStudent = new Student({
-      firstName,
-      middleName,
-      lastName,
-      email,
-      password,
-      classId,
-      subclassId,
-      academicYearId,
-      identifier,
-      gender,
-      nationality: finalNationality,
-      city,
-      birthDate: birthDate ? new Date(birthDate) : undefined,
-      father_name,
-      mother_name,
-      role: 'student'
-    });
-
-    await newStudent.save();
-
-    res.status(201).json({
-      success: true,
-      data: {
-        ...newStudent.toObject(),
-        password // Include password in response
-      },
-      message: 'Student created successfully'
-    });
-
-  } catch (error) {
-    console.error('Create student error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create student',
-      error: error.message
-    });
-  }
+    try {
+        const {
+            firstName, middleName, lastName, email,
+            classId, subclassId, academicYearId,
+            gender, nationality, city, birthDate,
+            father_name, mother_name
+        } = req.body;
+        if (!firstName || !lastName || !classId || !subclassId || !academicYearId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields'
+            });
+        }
+        const studentCount = await Student.countDocuments({ subclassId });
+        if (studentCount >= 35) {
+            return res.status(400).json({
+                success: false,
+                message: 'Subclass is full'
+            });
+        }
+        let identifier;
+        let isUnique = false;
+        while (!isUnique) {
+            identifier = generateIdentifier();
+            const existingStudent = await Student.findOne({ identifier });
+            if (!existingStudent) {
+                isUnique = true;
+            }
+        }
+        const password = generateIdentifier();
+        const finalNationality = nationality && nationality.trim() !== '' ? nationality : "عربي سوري";
+        const finalEmail = email && email.trim() !== '' ? email : "motafokeen.school@gmail.com";
+        const newStudent = new Student({
+            firstName,
+            middleName,
+            lastName,
+            email: finalEmail,
+            password,
+            classId,
+            subclassId,
+            academicYearId,
+            identifier,
+            gender,
+            nationality: finalNationality,
+            city,
+            birthDate: birthDate ? new Date(birthDate) : undefined,
+            father_name,
+            mother_name,
+            role: 'student'
+        });
+        await newStudent.save();
+        res.status(201).json({
+            success: true,
+            data: {
+                ...newStudent.toObject(),
+                password 
+            },
+            message: 'تم إنشاء سجل الطالب بنجاح'
+        });
+    } catch (error) {
+        console.error('Create student error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'فشل في إنشاء سجل الطالب',
+            error: error.message
+        });
+    } 
 });
 
-// Update student
 router.put('/:id', async (req, res) => {
     try {
         const updatedStudent = await Student.findByIdAndUpdate(
@@ -192,14 +178,12 @@ router.put('/:id', async (req, res) => {
         .populate('subclassId', 'name')
         .populate('academicYearId', 'year')
         .select('firstName middleName lastName email password identifier classId subclassId academicYearId gender nationality city birthDate father_name mother_name');
-        
         if (!updatedStudent) {
             return res.status(404).json({
                 success: false,
                 message: 'Student not found'
             });
         }
-
         res.status(200).json({
             success: true,
             data: updatedStudent,
@@ -214,18 +198,15 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// Delete student
 router.delete('/:id', async (req, res) => {
     try {
         const deletedStudent = await Student.findByIdAndDelete(req.params.id);
-        
         if (!deletedStudent) {
             return res.status(404).json({
                 success: false,
                 message: 'Student not found'
             });
         }
-
         res.status(200).json({
             success: true,
             message: 'Student deleted successfully'
