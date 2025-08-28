@@ -8,7 +8,7 @@ const Class = require('../models/classes');
 // Create new mark
 router.post('/', async (req, res) => {
     try {
-        const { id, class: className, subject, firstQuiz, secondQuiz, finalExam } = req.body;
+        const { id, class: className, subject, firstQuiz, secondQuiz, finalExam, semester } = req.body;
 
         const studentInfo = await Student.findOne({ identifier: id });
         if (!studentInfo) {
@@ -28,7 +28,8 @@ router.post('/', async (req, res) => {
 
         const subjectInfo = await Subject.findOne({ 
             name: subject,
-            classId: classInfo._id
+            classId: classInfo._id,
+            semester: parseInt(semester)
         });
         if (!subjectInfo) {
             return res.status(404).json({
@@ -37,25 +38,13 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // Check if mark already exists for this student and subject
-        const existingMark = await Marks.findOne({
-            studentId: studentInfo._id,
-            subjectId: subjectInfo._id
-        });
-
-        if (existingMark) {
-            return res.status(400).json({
-                success: false,
-                message: 'Mark already exists for this student and subject'
-            });
-        }
-
         const newMark = new Marks({
             firstQuiz,
             secondQuiz,
             finalExam,
             studentId: studentInfo._id,
-            subjectId: subjectInfo._id
+            subjectId: subjectInfo._id,
+            semester: parseInt(semester)
         });
 
         await newMark.save();
