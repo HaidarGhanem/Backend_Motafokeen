@@ -8,7 +8,7 @@ const Class = require('../models/classes');
 // Create new mark
 router.post('/', async (req, res) => {
     try {
-        const { id, class: className, subject, firstQuiz, secondQuiz, finalExam, semester } = req.body;
+        const { id, class: className, subject, firstQuiz, secondQuiz, finalExam , semester} = req.body;
 
         const studentInfo = await Student.findOne({ identifier: id });
         if (!studentInfo) {
@@ -28,8 +28,7 @@ router.post('/', async (req, res) => {
 
         const subjectInfo = await Subject.findOne({ 
             name: subject,
-            classId: classInfo._id,
-            semester: parseInt(semester)
+            classId: classInfo._id
         });
         if (!subjectInfo) {
             return res.status(404).json({
@@ -42,9 +41,9 @@ router.post('/', async (req, res) => {
             firstQuiz,
             secondQuiz,
             finalExam,
+            semester: parseInt(semester),
             studentId: studentInfo._id,
-            subjectId: subjectInfo._id,
-            semester: parseInt(semester)
+            subjectId: subjectInfo._id
         });
 
         await newMark.save();
