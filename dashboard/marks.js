@@ -194,10 +194,10 @@ router.post('/search', async (req, res) => {
 
         // Fetch marks with populated data
        const marks = await Marks.find(query)
-    .populate('studentId', 'firstName middleName lastName identifier')
-    .populate('subjectId', 'name classId') // لا نحتاج semester من subject
-    .select('firstQuiz secondQuiz secondQuiz finalExam semester studentId subjectId') // نتأكد semester يطلع
-    .sort({ 'studentId.lastName': 1, 'subjectId.name': 1 });
+  .populate('studentId', 'firstName middleName lastName identifier')
+  .populate('subjectId', 'name semester classId') 
+  .select('firstQuiz secondQuiz finalExam studentId subjectId')
+
 
 
         res.status(200).json({
