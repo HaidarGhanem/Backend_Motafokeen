@@ -1,71 +1,140 @@
 const express = require('express');
 const router = express.Router();
-const Student = require('../models/students');
-const Class = require('../models/classes'); 
+const Student = require('../models/students'); 
+const Class = require('../models/classes');     
+const Marks = require('../models/marks');     
 
 const classOrder = [
-    "الصف السابع",
-    "الصف الثامن",
-    "الصف التاسع",
-    "الصف العاشر",
-    "الصف الحادي عشر",
-    "الصف البكالوريا"
+  "الصف السابع",
+  "الصف الثامن",
+  "الصف التاسع",
+  "الصف العاشر",
+  "الصف الحادي عشر",
+  "الصف البكالوريا"
 ];
 
+// Promote all eligible students (failedSubjects < 3) to next class in classOrder
 router.put('/promote', async (req, res) => {
-    try {
-        const students = await Student.find().populate('classId');
-        const classes = await Class.find();
-        const classMap = {};
-        classes.forEach(c => classMap[c.name] = c._id);
+  try {
+    const students = await Student.find().populate('classId').lean();
+    const classes = await Class.find().lean();
 
-        const bulkOps = [];
+    const classMap = {};
+    classes.forEach(c => {
+      if (c && c.name) classMap[c.name.trim()] = c._id;
+    });
 
-        for (const student of students) {
-        if (student.failedSubjects < 3) {
-            const currentIndex = classOrder.indexOf(student.classId.name);
-            if (currentIndex < classOrder.length - 1) {
-            const nextClassName = classOrder[currentIndex + 1];
-            bulkOps.push({
-                updateOne: {
-                filter: { _id: student._id },
-                update: { classId: classMap[nextClassName] }
-                }
-            });
-            }
+    const bulkOps = [];
+    const promoted = [];
+    const skipped = [];
+
+    for (const student of students) {
+      const failedSubjects = Number(student.failedSubjects || 0);
+      if (failedSubjects >= 3) {
+        skipped.push({ id: student._id, reason: 'failedSubjects >= 3' });
+        continue;
+      }
+
+      const className = student.classId && student.classId.name ? student.classId.name.trim() : null;
+      if (!className) {
+        skipped.push({ id: student._id, reason: 'no class assigned' });
+        continue;
+      }
+
+      const currentIndex = classOrder.findIndex(name => name.trim() === className);
+      if (currentIndex === -1) {
+        skipped.push({ id: student._id, reason: 'class not in promotion order' });
+        continue;
+      }
+
+      if (currentIndex >= classOrder.length - 1) {
+        skipped.push({ id: student._id, reason: 'already in last class' });
+        continue;
+      }
+
+      const nextClassName = classOrder[currentIndex + 1].trim();
+      const nextClassId = classMap[nextClassName];
+      if (!nextClassId) {
+        skipped.push({ id: student._id, reason: `next class "${nextClassName}" not found in DB` });
+        continue;
+      }
+
+      bulkOps.push({
+        updateOne: {
+          filter: { _id: student._id },
+          update: { $set: { classId: nextClassId } }
         }
-        }
+      });
 
-        if (bulkOps.length) await Student.bulkWrite(bulkOps);
+      const fullName = [student.firstName, student.middleName, student.secondMiddleName, student.lastName]
+        .filter(Boolean)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
-        res.status(200).json({ success: true, message: 'تم ترقية الطلاب بنجاح' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+      promoted.push({ id: student._id, name: fullName, from: className, to: nextClassName });
     }
+
+    let bulkResult = null;
+    if (bulkOps.length) {
+      bulkResult = await Student.bulkWrite(bulkOps);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Promotion run completed',
+      promotedCount: promoted.length,
+      promoted,
+      skippedCount: skipped.length,
+      skipped,
+      bulkResult
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
+// Reset failedSubjects for everyone
 router.put('/reset-failed', async (req, res) => {
-    try {
-        await Student.updateMany({}, { failedSubjects: 0 });
-        res.status(200).json({ success: true, message: 'تم إعادة ضبط المواد الفاشلة لجميع الطلاب' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
+  try {
+    const result = await Student.updateMany({}, { $set: { failedSubjects: 0 } });
+    const modifiedCount = result.modifiedCount ?? result.nModified ?? 0;
+    res.status(200).json({ success: true, message: 'تم إعادة ضبط المواد الفاشلة لجميع الطلاب', modifiedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
+// Report: who is eligible for promotion and their current status
 router.get('/report', async (req, res) => {
-    try {
-        const students = await Student.find().populate('classId');
-        const report = students.map(s => ({
-        name: `${s.firstName} ${s.middleName} ${s.lastName}`,
-        currentClass: s.classId.name,
-        failedSubjects: s.failedSubjects,
-        eligibleForPromotion: s.failedSubjects < 3
-        }));
-        res.status(200).json({ success: true, data: report });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
+  try {
+    const students = await Student.find().populate('classId').lean();
+    const report = students.map(s => {
+      const fullName = [s.firstName, s.middleName, s.secondMiddleName, s.lastName]
+        .filter(Boolean)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const currentClass = s.classId && s.classId.name ? s.classId.name.trim() : 'N/A';
+      const failedSubjects = Number(s.failedSubjects || 0);
+      const currentIndex = classOrder.findIndex(name => name.trim() === currentClass);
+
+      const eligibleForPromotion = failedSubjects < 3 && currentIndex !== -1 && currentIndex < classOrder.length - 1;
+
+      return {
+        id: s._id,
+        name: fullName,
+        currentClass,
+        failedSubjects,
+        eligibleForPromotion
+      };
+    });
+
+    res.status(200).json({ success: true, data: report });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 module.exports = router;
