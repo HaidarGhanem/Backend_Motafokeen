@@ -55,6 +55,7 @@ app.use('/dashboard/olympics' , require('./dashboard/olympic'))
 app.use('/dashboard/web' , require('./dashboard/web'))
 app.use('/dashboard/owner' , require('./dashboard/owner'))
 app.use('/dashboard/employees' , require('./dashboard/employees'))
+app.use('/dashboard/promotions' , require('./dashboard/promotions'))
 
 app.listen(PORT, () => {
     console.log(`Server is running on PORT : ${PORT}`)

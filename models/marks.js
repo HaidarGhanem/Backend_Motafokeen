@@ -17,7 +17,7 @@ const marksSchema = new mongoose.Schema({
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
 }, { timestamps: true });
 
-// Helper to calculate totals and result
+// Calculate totals and result
 marksSchema.methods.calculateTotals = function() {
     const verbal = Number(this.verbal || 0);
     const homeworks = Number(this.homeworks || 0);
@@ -44,14 +44,11 @@ marksSchema.pre('save', function(next) {
     next();
 });
 
-// Pre-update hook for findOneAndUpdate
+// Pre-update hook
 marksSchema.pre('findOneAndUpdate', async function(next) {
     const update = this.getUpdate();
-
-    // Fetch existing document
     const docToUpdate = await this.model.findOne(this.getQuery());
 
-    // Prepare updated values
     const updatedData = {
         verbal: Number(update.verbal ?? docToUpdate.verbal ?? 0),
         homeworks: Number(update.homeworks ?? docToUpdate.homeworks ?? 0),
@@ -60,52 +57,39 @@ marksSchema.pre('findOneAndUpdate', async function(next) {
         finalExam: Number(update.finalExam ?? docToUpdate.finalExam ?? 0),
     };
 
-    // Calculate totals and result
     const total = updatedData.verbal * 0.1 + updatedData.homeworks * 0.2 + updatedData.activities * 0.2 + updatedData.quiz * 0.2;
     const finalTotal = total + updatedData.finalExam * 0.4;
+
     let result = 'holding';
     if (updatedData.finalExam) result = finalTotal >= 50 ? 'passed' : 'failed';
 
-    // Set values to update
-    this.set({
-        ...updatedData,
-        total,
-        finalTotal,
-        result
-    });
-
+    this.set({ ...updatedData, total, finalTotal, result });
     next();
 });
 
-// Post-save, post-update, post-delete hooks to update student average
-marksSchema.post('save', async function(doc) {
-    await updateStudentAverage(doc.studentId);
-});
-
-marksSchema.post('findOneAndUpdate', async function(doc) {
-    if (doc) await updateStudentAverage(doc.studentId);
-});
-
-marksSchema.post('deleteOne', { document: true, query: false }, async function(doc) {
-    if (doc) await updateStudentAverage(doc.studentId);
-});
-
-// Helper function to update student average
-async function updateStudentAverage(studentId) {
+// Update student average & failedSubjects
+async function updateStudentStats(studentId) {
     const Student = mongoose.model('Student');
+    const Marks = mongoose.model('Marks');
+
     const student = await Student.findById(studentId);
     if (student) {
-        await student.updateAverage();
+        // Update average
+        const marks = await Marks.find({ studentId });
+        const totalSum = marks.reduce((sum, mark) => sum + mark.finalTotal, 0);
+        student.average = marks.length ? Math.round((totalSum / marks.length) * 100) / 100 : 0;
+
+        // Update failedSubjects count
+        student.failedSubjects = marks.filter(m => m.result === 'failed').length;
+
+        await student.save();
     }
 }
 
-// Static method to calculate student average
-marksSchema.statics.calculateStudentAverage = async function(studentId) {
-    const marks = await this.find({ studentId });
-    if (!marks || marks.length === 0) return 0;
-    const totalSum = marks.reduce((sum, mark) => sum + mark.finalTotal, 0);
-    return Math.round((totalSum / marks.length) * 100) / 100;
-};
+// Post hooks
+marksSchema.post('save', async function(doc) { await updateStudentStats(doc.studentId); });
+marksSchema.post('findOneAndUpdate', async function(doc) { if (doc) await updateStudentStats(doc.studentId); });
+marksSchema.post('deleteOne', { document: true, query: false }, async function(doc) { if (doc) await updateStudentStats(doc.studentId); });
 
 const Marks = mongoose.model('Marks', marksSchema);
 module.exports = Marks;

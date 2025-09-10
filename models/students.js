@@ -99,8 +99,12 @@ const studentSchema = new mongoose.Schema({
     average: {
         type: Number,
         default: 0
+    },
+    failedSubjects: {
+        type: Number,
+        default: 0
     }
-})
+} ,{ timestamps: true })
 
 // Update average method
 studentSchema.methods.updateAverage = async function() {
