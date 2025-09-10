@@ -61,33 +61,27 @@ marksSchema.pre('save', function(next) {
 })
 
 // Ensure result is updated on update
-marksSchema.pre('findOneAndUpdate', function(next) {
-    const update = this.getUpdate()
+marksSchema.pre('findOneAndUpdate', async function(next) {
+    const update = this.getUpdate();
+    const docToUpdate = await this.model.findOne(this.getQuery());
 
-    if (update.finalExam !== undefined) {
-        const verbal = update.verbal ?? this._update.verbal ?? 0
-        const homeworks = update.homeworks ?? this._update.homeworks ?? 0
-        const activities = update.activities ?? this._update.activities ?? 0
-        const quiz = update.quiz ?? this._update.quiz ?? 0
-        const finalExam = update.finalExam ?? this._update.finalExam ?? 0
+    const verbal     = Number(update.verbal ?? docToUpdate.verbal ?? 0);
+    const homeworks  = Number(update.homeworks ?? docToUpdate.homeworks ?? 0);
+    const activities = Number(update.activities ?? docToUpdate.activities ?? 0);
+    const quiz       = Number(update.quiz ?? docToUpdate.quiz ?? 0);
+    const finalExam  = Number(update.finalExam ?? docToUpdate.finalExam ?? 0);
 
-        const total = verbal * 0.10 + homeworks * 0.20 + activities * 0.20 + quiz * 0.20
-        const finalTotal = total + (finalExam * 0.40)
+    const total = verbal * 0.1 + homeworks * 0.2 + activities * 0.2 + quiz * 0.2;
+    const finalTotal = total + finalExam * 0.4;
 
-        if (!finalExam || finalExam === 0) {
-            update.result = 'holding'
-        } else if (finalTotal >= 50) {
-            update.result = 'passed'
-        } else {
-            update.result = 'failed'
-        }
+    update.total = total;
+    update.finalTotal = finalTotal;
+    if (!finalExam) update.result = 'holding';
+    else if (finalTotal >= 50) update.result = 'passed';
+    else update.result = 'failed';
 
-        update.total = total
-        update.finalTotal = finalTotal
-    }
-
-    next()
-})
+    next();
+});
 
 marksSchema.post('save', async function(doc) {
     await updateStudentAverage(doc.studentId)
