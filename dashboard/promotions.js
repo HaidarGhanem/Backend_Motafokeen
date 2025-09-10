@@ -107,35 +107,34 @@ router.put('/reset-failed', async (req, res) => {
 
 // Report: who is eligible for promotion and their current status
 router.get('/report', async (req, res) => {
-    try {
-        const students = await Student.find().populate('classId').lean();
-        const report = students.map(s => {
-            const fullName = [s.firstName, s.middleName, s.secondMiddleName, s.lastName]
-                .filter(Boolean)
-                .join(' ')
-                .replace(/\s+/g, ' ')
-                .trim();
+  try {
+    const students = await Student.find().populate('classId').lean();
+    const report = students.map(s => {
+      const fullName = [s.firstName, s.middleName, s.secondMiddleName, s.lastName]
+        .filter(Boolean)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
-            const currentClass = s.classId && s.classId.name ? s.classId.name.trim() : 'N/A';
-            const failedSubjects = Number(s.failedSubjects || 0);
-            const currentIndex = classOrder.findIndex(name => name.trim() === currentClass);
+      const currentClass = s.classId && s.classId.name ? s.classId.name.trim() : 'N/A';
+      const failedSubjects = Number(s.failedSubjects || 0);
+      const currentIndex = classOrder.findIndex(name => name.trim() === currentClass);
 
-            const eligibleForPromotion = failedSubjects < 3 && currentIndex !== -1 && currentIndex < classOrder.length - 1;
+      const eligibleForPromotion = failedSubjects < 3 && currentIndex !== -1 && currentIndex < classOrder.length - 1;
 
-            return {
-                id: s._id,
-                name: fullName,
-                currentClass,
-                subclass: s.subclass || '', // Add subclass information
-                failedSubjects,
-                eligibleForPromotion
-            };
-        });
+      return {
+        id: s._id,
+        name: fullName,
+        currentClass,
+        failedSubjects,
+        eligibleForPromotion
+      };
+    });
 
-        res.status(200).json({ success: true, data: report });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
+    res.status(200).json({ success: true, data: report });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 module.exports = router;
