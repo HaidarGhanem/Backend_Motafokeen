@@ -8,7 +8,7 @@ const Class = require('../models/classes');
 // Create new mark
 router.post('/', async (req, res) => {
     try {
-        const { id, class: className, subject, firstQuiz, secondQuiz, finalExam , semester} = req.body;
+        const { id, class: className, subject, verbal, homeworks, activities, quiz, finalExam, semester } = req.body;
 
         const studentInfo = await Student.findOne({ identifier: id });
         if (!studentInfo) {
@@ -38,8 +38,10 @@ router.post('/', async (req, res) => {
         }
 
         const newMark = new Marks({
-            firstQuiz,
-            secondQuiz,
+            verbal,
+            homeworks,
+            activities,
+            quiz,
             finalExam,
             semester: parseInt(semester),
             studentId: studentInfo._id,
@@ -64,18 +66,20 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const markId = req.params.id;
-        const { firstQuiz, secondQuiz, finalExam } = req.body;
+        const { verbal, homeworks, activities, quiz, finalExam } = req.body;
 
-        if (!markId || firstQuiz === undefined || secondQuiz === undefined || finalExam === undefined) {
+        if (!markId) {
             return res.status(400).json({
                 success: false,
-                message: 'Mark ID and all marks are required'
+                message: 'Mark ID is required'
             });
         }
 
         const updatedMark = await Marks.findByIdAndUpdate(markId, {
-            firstQuiz,
-            secondQuiz,
+            verbal,
+            homeworks,
+            activities,
+            quiz,
             finalExam
         }, {
             new: true,
@@ -187,18 +191,15 @@ router.post('/search', async (req, res) => {
                 });
             }
             
-            // Add subject filter to main query
             if (!query.subjectId) query.subjectId = {};
             query.subjectId.$in = subjects.map(s => s._id);
         }
 
         // Fetch marks with populated data
-       const marks = await Marks.find(query)
-  .populate('studentId', 'firstName middleName lastName identifier')
-  .populate('subjectId', 'name semester classId') 
-  .select('firstQuiz secondQuiz finalExam studentId subjectId')
-
-
+        const marks = await Marks.find(query)
+            .populate('studentId', 'firstName middleName lastName identifier')
+            .populate('subjectId', 'name semester classId') 
+            .select('verbal homeworks activities quiz finalExam total finalTotal studentId subjectId');
 
         res.status(200).json({
             success: true,

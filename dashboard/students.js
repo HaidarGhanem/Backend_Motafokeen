@@ -81,7 +81,9 @@ router.get('/', async (req, res) => {
             .populate('classId', 'name')
             .populate('subclassId', 'name')
             .populate('academicYearId', 'year')
-            .select('firstName middleName lastName email password identifier classId subclassId academicYearId gender nationality city birthDate father_name mother_name');
+            .select('firstName middleName lastName email password identifier classId subclassId academicYearId gender nationality city birthDate father_name mother_name')
+            .sort({ createdAt: -1 }) 
+            .exec();
         
         res.status(200).json({
             success: true,
