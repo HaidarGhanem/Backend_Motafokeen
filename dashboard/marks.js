@@ -199,8 +199,8 @@ router.post('/search', async (req, res) => {
         const marks = await Marks.find(query)
             .populate('studentId', 'firstName middleName lastName identifier')
             .populate('subjectId', 'name semester classId') 
-            .select('verbal homeworks activities quiz finalExam total finalTotal studentId subjectId');
-
+            .select('verbal homeworks activities quiz finalExam total finalTotal studentId subjectId result')
+            .sort({ createdAt: -1 });
         res.status(200).json({
             success: true,
             data: marks,
