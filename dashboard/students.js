@@ -100,7 +100,7 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const {
-            firstName, middleName, lastName, email,
+            firstName, middleName, secondMiddleName, lastName, email,
             classId, subclassId, academicYearId,
             gender, nationality, city, birthDate,
             father_name, mother_name
@@ -133,6 +133,7 @@ router.post('/', async (req, res) => {
         const newStudent = new Student({
             firstName,
             middleName,
+            secondMiddleName,
             lastName,
             email: finalEmail,
             password,

@@ -9,6 +9,10 @@ const studentSchema = new mongoose.Schema({
         type: String, 
         required: true 
     },
+    secondMiddleName: {
+        type: String,
+        required: true
+    },
     lastName: { 
         type: String, 
         required: true 
