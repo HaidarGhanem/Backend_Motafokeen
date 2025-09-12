@@ -62,10 +62,17 @@ router.post('/logout' , (req, res) => {
 });
 
 router.get('/session', (req, res) => {
-    if (req.session.user) {
-        return res.json({ user: req.session.user });
-    }
-    res.status(401).json({ message: 'Not authenticated' });
+  const token = req.headers.authorization?.split(' ')[1] || req.query.token;
+
+  if (!token) return res.status(401).json({ message: 'Not authenticated' });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return res.json({ user: { id: decoded.id, role: decoded.role } });
+  } catch (err) {
+    return res.status(401).json({ message: 'Invalid token' });
+  }
 });
+
 
 module.exports = router
