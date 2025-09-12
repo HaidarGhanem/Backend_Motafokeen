@@ -12,12 +12,18 @@ const PORT = process.env.PORT || 3000
 connectDB()
 
 //Session Initialization
-app.use(session({
-    secret: process.env.SESSION_SECRET,
+app.use(
+  session({
+    secret: process.env.PRIVATE_KEY,
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false } //Set true for using HTTPS
-}))
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // true in production
+      sameSite: 'none', // allow cross-site cookies
+    },
+  })
+);
 
 //Middlewares
 app.use(cors())
