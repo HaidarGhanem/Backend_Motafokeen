@@ -45,21 +45,30 @@ router.get('/', async (req, res) => {
 
 router.get('/download-cert', async (req, res) => {
     try {
-        const student = await Student.findById(req.headers['studentid'])
-        if (!student) return res.status(404).json({ error: "Student not found" })
-        if (!student.certificate.data) return res.status(404).json({ error: "No certificate found" })
-
-        res.set({
-            'Content-Type': student.certificate.contentType,
-            'Content-Disposition': `attachment; filename="${student.certificate.name}"`,
-            'Content-Length': student.certificate.data.length
-        })
-
-        res.send(student.certificate.data)
-
-    } catch (error) {
-        res.status(500).json({ error: error.message })
+    const student = await Student.findById(req.params.id);
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
     }
+
+    if (!student.certificates.length) {
+      return res.status(404).json({ error: "No certificates found" });
+    }
+
+    // Get the last uploaded certificate
+    const cert = student.certificates[student.certificates.length - 1];
+
+    res.set({
+      'Content-Type': cert.contentType,
+      'Content-Disposition': `attachment; filename="${cert.name}"`,
+      'Content-Length': cert.data.length
+    });
+
+    res.send(cert.data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 })
+
+
 
 module.exports = router
