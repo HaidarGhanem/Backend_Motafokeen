@@ -81,12 +81,14 @@ const studentSchema = new mongoose.Schema({
     city: {
         type: String
     },
-    certificate: {
-    name: String,
-    data: Buffer,
-    contentType: String,
-    uploadedAt: { type: Date, default: Date.now }
-    },
+    certificates: [
+        {
+        name: String,
+        data: Buffer,
+        contentType: String,
+        uploadedAt: { type: Date, default: Date.now }
+        }
+    ],
     average: {
         type: Number,
         default: 0

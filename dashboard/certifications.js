@@ -1,139 +1,96 @@
-// routes/certifications.js
-const express = require('express');
-const router = express.Router();
-const Student = require('../models/students');
-const multer = require('multer');
+const express = require('express')
+const mongoose = require('mongoose')
+const multer = require('multer')
+const Student = require('./models/Student')
 
-// ---------- Multer Config (PDF only, 50MB max) ----------
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF files are allowed!'), false);
-    }
-  }
-});
+const router = express.Router()
 
-// ---------- Upload Certificate ----------
-router.post('/upload', upload.single('certificate'), async (req, res) => {
+// Multer storage (keep in memory so we save as Buffer in DB)
+const storage = multer.memoryStorage()
+const upload = multer({ storage: storage, limits: { fileSize: 50 * 1024 * 1024 } })
+
+// =========================
+// Upload certificate (PDF)
+// =========================
+router.post('/:id/certificates', upload.single('certificate'), async (req, res) => {
   try {
-    const { id } = req.body; // student identifier
-    if (!id) return res.status(400).json({ success: false, message: 'Student ID is required' });
+    const student = await Student.findById(req.params.id)
+    if (!student) return res.status(404).json({ message: 'Student not found' })
 
-    const student = await Student.findOne({ identifier: id });
-    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' })
+    if (req.file.mimetype !== 'application/pdf') {
+      return res.status(400).json({ message: 'Only PDF files allowed' })
+    }
 
-    if (!req.file) return res.status(400).json({ success: false, message: 'No PDF file uploaded' });
-
-    student.certificate = {
+    student.certificates.push({
       name: req.file.originalname,
       data: req.file.buffer,
-      contentType: req.file.mimetype,
-      uploadedAt: new Date()
-    };
+      contentType: req.file.mimetype
+    })
 
-    await student.save({ validateModifiedOnly: true });
-
-    res.status(201).json({
-      success: true,
-      message: 'Certificate uploaded successfully',
-      data: {
-        name: student.certificate.name,
-        uploadedAt: student.certificate.uploadedAt,
-        url: `${req.protocol}://${req.get('host')}/certifications/${student.identifier}/certificate`
-      }
-    });
+    await student.save()
+    res.status(201).json({ message: 'Certificate uploaded successfully' })
   } catch (err) {
-    console.error('Upload Error:', err);
-    res.status(500).json({ success: false, message: 'Failed to upload certificate', error: err.message });
+    res.status(500).json({ error: err.message })
   }
-});
+})
 
-// ---------- Get Certificate ----------
-router.get('/:identifier/certificate', async (req, res) => {
+// =========================
+// Get all certificates meta
+// =========================
+router.get('/:id/certificates', async (req, res) => {
   try {
-    const student = await Student.findOne({ identifier: req.params.identifier });
-    if (!student || !student.certificate || !student.certificate.data) {
-      return res.status(404).json({ success: false, message: 'Certificate not found' });
+    const student = await Student.findById(req.params.id)
+    if (!student) return res.status(404).json({ message: 'Student not found' })
+
+    const certs = student.certificates.map((c, index) => ({
+      index,
+      name: c.name,
+      uploadedAt: c.uploadedAt
+    }))
+    res.json(certs)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// =========================
+// Preview (download) a cert
+// =========================
+router.get('/:id/certificates/:index', async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id)
+    if (!student) return res.status(404).json({ message: 'Student not found' })
+
+    const cert = student.certificates[req.params.index]
+    if (!cert) return res.status(404).json({ message: 'Certificate not found' })
+
+    res.contentType(cert.contentType)
+    res.send(cert.data)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// =========================
+// Delete a certificate
+// =========================
+router.delete('/:id/certificates/:index', async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id)
+    if (!student) return res.status(404).json({ message: 'Student not found' })
+
+    if (!student.certificates[req.params.index]) {
+      return res.status(404).json({ message: 'Certificate not found' })
     }
 
-    res.set({
-      'Content-Type': student.certificate.contentType,
-      'Content-Disposition': `inline; filename="${student.certificate.name}"`
-    });
-    res.send(student.certificate.data);
+    student.certificates.splice(req.params.index, 1)
+    await student.save()
+
+    res.json({ message: 'Certificate deleted successfully' })
   } catch (err) {
-    console.error('Fetch Certificate Error:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch certificate', error: err.message });
+    res.status(500).json({ error: err.message })
   }
-});
+})
 
-// ---------- Get Upload History for a Student ----------
-router.get('/:identifier/history', async (req, res) => {
-  try {
-    const student = await Student.findOne({ identifier: req.params.identifier });
-    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
-
-    const history = student.certificate?.data
-      ? [{
-          studentId: student.identifier,
-          fileName: student.certificate.name,
-          uploadedAt: student.certificate.uploadedAt,
-          previewUrl: `${req.protocol}://${req.get('host')}/certifications/${student.identifier}/certificate`
-        }]
-      : [];
-
-    res.json({ success: true, data: history });
-  } catch (err) {
-    console.error('History Error:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch history', error: err.message });
-  }
-});
-
-// ---------- Delete Certificate ----------
-router.delete('/:identifier', async (req, res) => {
-  try {
-    const student = await Student.findOne({ identifier: req.params.identifier });
-    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
-
-    if (!student.certificate || !student.certificate.data) {
-      return res.status(404).json({ success: false, message: 'No certificate found for this student' });
-    }
-
-    student.certificate = undefined;
-    await student.save({ validateModifiedOnly: true });
-
-    res.json({ success: true, message: 'Certificate deleted successfully' });
-  } catch (err) {
-    console.error('Delete Error:', err);
-    res.status(500).json({ success: false, message: 'Failed to delete certificate', error: err.message });
-  }
-});
-
-// ---------- Get All Students with Certificates ----------
-router.get('/history/all', async (req, res) => {
-  try {
-    const students = await Student.find(
-      { "certificate.data": { $exists: true, $ne: null } },
-      { identifier: 1, firstName: 1, lastName: 1, "certificate.name": 1, "certificate.uploadedAt": 1 }
-    ).lean();
-
-    const history = students.map(st => ({
-      studentId: st.identifier,
-      studentName: `${st.firstName} ${st.lastName}`,
-      fileName: st.certificate.name,
-      uploadedAt: st.certificate.uploadedAt,
-      previewUrl: `${req.protocol}://${req.get('host')}/certifications/${st.identifier}/certificate`
-    }));
-
-    res.json({ success: true, data: history });
-  } catch (err) {
-    console.error('Fetch All History Error:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch history', error: err.message });
-  }
-});
-
-module.exports = router;
+module.exports = router
