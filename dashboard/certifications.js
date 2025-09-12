@@ -78,20 +78,25 @@ router.get('/:identifier/certificate', async (req, res) => {
   }
 });
 
-// Get all students who have certificates
-router.get('/history', async (req, res) => {
+// ---------- Get Upload History for a Specific Student ----------
+router.get('/:identifier/history', async (req, res) => {
   try {
-    const students = await Student.find(
-      { "certificate.data": { $exists: true, $ne: null } },
-      { identifier: 1, "certificate.name": 1, "certificate.uploadedAt": 1 }
-    ).lean();
+    const student = await Student.findOne({ identifier: req.params.identifier });
+    
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
 
-    const history = students.map(st => ({
-      studentId: st.identifier,
-      fileName: st.certificate.name,
-      uploadedAt: st.certificate.uploadedAt,
-      previewUrl: `${req.protocol}://${req.get('host')}/certifications/${st.identifier}/certificate`
-    }));
+    if (!student.certificate || !student.certificate.data) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const history = [{
+      studentId: student.identifier,
+      fileName: student.certificate.name,
+      uploadedAt: student.certificate.uploadedAt,
+      previewUrl: `${req.protocol}://${req.get('host')}/certifications/${student.identifier}/certificate`
+    }];
 
     res.json({ success: true, data: history });
   } catch (err) {
@@ -100,5 +105,54 @@ router.get('/history', async (req, res) => {
   }
 });
 
+// ---------- Delete Certificate ----------
+router.delete('/:identifier', async (req, res) => {
+  try {
+    const student = await Student.findOne({ identifier: req.params.identifier });
+    
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    if (!student.certificate || !student.certificate.data) {
+      return res.status(404).json({ success: false, message: 'No certificate found for this student' });
+    }
+
+    // Remove the certificate
+    student.certificate = undefined;
+    await student.save({ validateModifiedOnly: true });
+
+    res.json({ 
+      success: true, 
+      message: 'Certificate deleted successfully' 
+    });
+  } catch (err) {
+    console.error("Delete Certificate Error:", err);
+    res.status(500).json({ success: false, message: "Failed to delete certificate" });
+  }
+});
+
+// Get all students who have certificates (for admin view)
+router.get('/history/all', async (req, res) => {
+  try {
+    const students = await Student.find(
+      { "certificate.data": { $exists: true, $ne: null } },
+      { identifier: 1, firstName: 1, lastName: 1, "certificate.name": 1, "certificate.uploadedAt": 1 }
+    ).lean();
+
+    const history = students.map(st => ({
+      studentId: st.identifier,
+      studentName: `${st.firstName} ${st.lastName}`,
+      fileName: st.certificate.name,
+      uploadedAt: st.certificate.uploadedAt,
+      previewUrl: `${req.protocol}://${req.get('host')}/certifications/${st.identifier}/certificate`
+    }));
+
+    res.json({ success: true, data: history });
+  } catch (err) {
+    console.error("Fetch All History Error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch history" });
+  }
+});
 
 module.exports = router;
