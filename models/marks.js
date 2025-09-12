@@ -25,7 +25,7 @@ marksSchema.methods.calculateTotals = function() {
     const quiz = Number(this.quiz || 0);
     const finalExam = Number(this.finalExam || 0);
 
-    const total = verbal * 0.1 + homeworks * 0.2 + activities * 0.2 + quiz * 0.2;
+    const total = verbal * 0.1 + homeworks * 0.1 + activities * 0.2 + quiz * 0.2;
     const finalTotal = total + finalExam * 0.4;
 
     let result = 'holding';
