@@ -1,7 +1,7 @@
 const express = require('express')
 const mongoose = require('mongoose')
 const multer = require('multer')
-const Student = require('./models/Student')
+const Student = require('../models/students')
 
 const router = express.Router()
 
