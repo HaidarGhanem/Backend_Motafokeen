@@ -118,7 +118,7 @@ router.get('/', async (req, res) => {
     res.status(200).json({
       success: true,
       data: posts,
-      message: 'Web posts retrieved successfully'
+      message: 'تم استدعاء المنشورات بنجاح'
     });
   } catch (error) {
     console.error('Fetch error:', error);

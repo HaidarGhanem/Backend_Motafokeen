@@ -28,7 +28,7 @@ router.post('/', async (req, res) => {
         if (!studentInfo) {
             return res.status(404).json({
                 success: false,
-                message: 'Student not found for the active academic year'
+                message: 'لم يتم إيجاد الطالب في السنة الحالية'
             });
         }
 
@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
         if (!classInfo) {
             return res.status(404).json({
                 success: false,
-                message: 'Class not found'
+                message: 'الصف غير موجود'
             });
         }
 
@@ -47,7 +47,7 @@ router.post('/', async (req, res) => {
         if (!subjectInfo) {
             return res.status(404).json({
                 success: false,
-                message: 'Subject not found for this class'
+                message: 'لم يتم إيجاد المادة للصف المطلوب'
             });
         }
 
@@ -66,7 +66,7 @@ router.post('/', async (req, res) => {
         res.status(201).json({
             success: true,
             data: newMark,
-            message: 'Mark created successfully'
+            message: 'تم إنشاء العلامة بنجاح'
         });
     } catch (error) {
         res.status(500).json({
@@ -105,14 +105,14 @@ router.put('/:id', async (req, res) => {
         if (!updatedMark) {
             return res.status(404).json({
                 success: false,
-                message: 'Mark not found'
+                message: 'العلامة غير موجودة'
             });
         }
 
         res.status(200).json({
             success: true,
             data: updatedMark,
-            message: 'Mark updated successfully'
+            message: 'تم تحديث العلامة بنجاح'
         });
     } catch (error) {
         res.status(500).json({
@@ -145,7 +145,7 @@ router.delete('/:id', async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: 'Mark deleted successfully'
+            message: 'تم حذف العلامة بنجاح'
         });
     } catch (error) {
         res.status(500).json({
@@ -184,7 +184,7 @@ router.post('/search', async (req, res) => {
                 return res.status(200).json({
                     success: true,
                     data: [],
-                    message: 'No marks found matching criteria'
+                    message: 'لا يوجد تطابق'
                 });
             }
             query.studentId = { $in: students.map(s => s._id) };
@@ -196,7 +196,7 @@ router.post('/search', async (req, res) => {
             if (!classInfo) {
                 return res.status(404).json({ 
                     success: false, 
-                    message: 'Class not found' 
+                    message: 'الصف غير موجود' 
                 });
             }
 
@@ -209,7 +209,7 @@ router.post('/search', async (req, res) => {
                 return res.status(200).json({
                     success: true,
                     data: [],
-                    message: 'No subjects found matching criteria'
+                    message: 'لا يوجد تطابق للمادة'
                 });
             }
             
@@ -227,7 +227,7 @@ router.post('/search', async (req, res) => {
         res.status(200).json({
             success: true,
             data: marks,
-            message: 'Marks retrieved successfully'
+            message: 'تم استدعاء العلامات بنجاح'
         });
     } catch (error) {
         res.status(500).json({
