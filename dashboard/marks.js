@@ -5,6 +5,7 @@ const Student = require('../models/students');
 const Marks = require('../models/marks');
 const Class = require('../models/classes');
 const AcademicYear = require('../models/year');
+const Subclass = require('../models/subclasses')
 
 // Helper: get active academic year
 async function getActiveYear() {
@@ -42,7 +43,8 @@ router.post('/', async (req, res) => {
 
         const subjectInfo = await Subject.findOne({ 
             name: subject,
-            classId: classInfo._id
+            classId: classInfo._id,
+            semester: parseInt(semester)
         });
         if (!subjectInfo) {
             return res.status(404).json({
@@ -166,31 +168,17 @@ router.post('/search', async (req, res) => {
             });
         }
 
-        const { id, firstName, middleName, lastName, class: className, semester, subject } = req.body;
+        const { id, firstName, middleName, lastName, class: className, subclass, semester, subject } = req.body;
 
         let query = {};
 
-        // Build student query if any student filters are provided
-        let studentQuery = { academicYearId: activeYear._id }; // restrict to active year
+        // 🔹 Build student query (restricted to active year)
+        let studentQuery = { academicYearId: activeYear._id };
         if (id && id.trim() !== '') studentQuery.identifier = id.trim();
         if (firstName && firstName.trim() !== '') studentQuery.firstName = new RegExp(firstName.trim(), 'i');
         if (middleName && middleName.trim() !== '') studentQuery.middleName = new RegExp(middleName.trim(), 'i');
         if (lastName && lastName.trim() !== '') studentQuery.lastName = new RegExp(lastName.trim(), 'i');
 
-        // If we have student filters, find matching students first
-        if (Object.keys(studentQuery).length > 0) {
-            const students = await Student.find(studentQuery);
-            if (students.length === 0) {
-                return res.status(200).json({
-                    success: true,
-                    data: [],
-                    message: 'لا يوجد تطابق'
-                });
-            }
-            query.studentId = { $in: students.map(s => s._id) };
-        }
-
-        // Build subject query if class/semester/subject filters are provided
         if (className && className.trim() !== '') {
             const classInfo = await Class.findOne({ name: className.trim() });
             if (!classInfo) {
@@ -199,9 +187,39 @@ router.post('/search', async (req, res) => {
                     message: 'الصف غير موجود' 
                 });
             }
+            studentQuery.classId = classInfo._id;
+
+            // 🔹 New: subclass filter
+            if (subclass && subclass.trim() !== '') {
+                const subInfo = await Subclass.findOne({ name: subclass.trim(), classId: classInfo._id });
+                if (!subInfo) {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'الشعبة غير موجودة'
+                    });
+                }
+                studentQuery.subclassId = subInfo._id;
+            }
+        }
+
+        if (Object.keys(studentQuery).length > 0) {
+            const students = await Student.find(studentQuery);
+            if (students.length === 0) {
+                return res.status(200).json({
+                    success: true,
+                    data: [],
+                    message: 'لا يوجد تطابق للطلاب'
+                });
+            }
+            query.studentId = { $in: students.map(s => s._id) };
+        }
+
+        // 🔹 Subject filter
+        if (className && className.trim() !== '') {
+            const classInfo = await Class.findOne({ name: className.trim() });
 
             let subjectQuery = { classId: classInfo._id };
-            if (semester) subjectQuery.semester = parseInt(semester);
+            if (semester && semester !== '') subjectQuery.semester = parseInt(semester, 10);
             if (subject && subject.trim() !== '') subjectQuery.name = subject.trim();
 
             const subjects = await Subject.find(subjectQuery);
@@ -212,15 +230,13 @@ router.post('/search', async (req, res) => {
                     message: 'لا يوجد تطابق للمادة'
                 });
             }
-            
-            if (!query.subjectId) query.subjectId = {};
-            query.subjectId.$in = subjects.map(s => s._id);
+            query.subjectId = { $in: subjects.map(s => s._id) };
         }
 
-        // Fetch marks with populated data
+        // 🔹 Fetch marks
         const marks = await Marks.find(query)
-            .populate('studentId', 'firstName middleName lastName identifier academicYearId')
-            .populate('subjectId', 'name semester classId') 
+            .populate('studentId', 'firstName middleName lastName identifier classId subclassId academicYearId')
+            .populate('subjectId', 'name semester classId')
             .select('verbal homeworks activities quiz finalExam total finalTotal studentId subjectId result')
             .sort({ createdAt: -1 });
 
@@ -232,9 +248,11 @@ router.post('/search', async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch marks: ' + error.message
+            message: 'فشل في استدعاء العلامات: ' + error.message
         });
-    }
+    } 
 });
+
+
 
 module.exports = router;
