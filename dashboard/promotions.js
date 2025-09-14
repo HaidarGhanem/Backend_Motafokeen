@@ -108,21 +108,46 @@ router.put('/promote', async (req, res) => {
   }
 });
 
-// Reset failedSubjects for everyone
+// Reset failedSubjects for students in the active academic year
 router.put('/reset-failed', async (req, res) => {
   try {
-    const result = await Student.updateMany({}, { $set: { failedSubjects: 0 } });
+    // Find the active academic year
+    const activeYear = await AcademicYear.findOne({ active: 1 });
+    if (!activeYear) {
+      return res.status(400).json({ success: false, message: 'No active academic year found' });
+    }
+
+    const result = await Student.updateMany(
+      { academicYearId: activeYear._id },
+      { $set: { failedSubjects: 0 } }
+    );
+
     const modifiedCount = result.modifiedCount ?? result.nModified ?? 0;
-    res.status(200).json({ success: true, message: 'تم إعادة ضبط المواد الفاشلة لجميع الطلاب', modifiedCount });
+    res.status(200).json({ 
+      success: true, 
+      message: 'تم إعادة ضبط المواد الفاشلة للطلاب في السنة الدراسية الحالية', 
+      modifiedCount 
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Report: who is eligible for promotion and their current status
+
+// Report: who is eligible for promotion and their current status (active year only)
 router.get('/report', async (req, res) => {
   try {
-    const students = await Student.find().populate('classId').lean();
+    // Find the active academic year
+    const activeYear = await AcademicYear.findOne({ active: 1 });
+    if (!activeYear) {
+      return res.status(400).json({ success: false, message: 'No active academic year found' });
+    }
+
+    // Get students in the active academic year
+    const students = await Student.find({ academicYearId: activeYear._id })
+      .populate('classId')
+      .lean();
+
     const report = students.map(s => {
       const fullName = [s.firstName, s.middleName, s.secondMiddleName, s.lastName]
         .filter(Boolean)
@@ -150,5 +175,6 @@ router.get('/report', async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
 
 module.exports = router;
