@@ -3,22 +3,32 @@ const router = express.Router();
 const Student = require('../models/students'); 
 const Class = require('../models/classes');     
 const Marks = require('../models/marks');     
+const AcademicYear = require('../models/years'); 
 
 const classOrder = [
-  "الصف السابع",
-  "الصف الثامن",
-  "الصف التاسع",
-  "الصف العاشر",
-  "الصف الحادي عشر",
-  "الصف البكالوريا"
+  "السابع",
+  "الثامن",
+  "التاسع",
+  "العاشر",
+  "الحادي عشر",
+  "بكلوريا"
 ];
 
-// Promote all eligible students (failedSubjects < 3) to next class in classOrder
+  // Promote all eligible students (failedSubjects < 3) to next class in classOrder
 router.put('/promote', async (req, res) => {
   try {
-    const students = await Student.find().populate('classId').lean();
-    const classes = await Class.find().lean();
+    // Find the active academic year
+    const activeYear = await AcademicYear.findOne({ active: 1 });
+    if (!activeYear) {
+      return res.status(400).json({ success: false, message: 'No active academic year found' });
+    }
 
+    // Only get students in the active academic year
+    const students = await Student.find({ academicYearId: activeYear._id })
+      .populate('classId')
+      .lean();
+
+    const classes = await Class.find().lean();
     const classMap = {};
     classes.forEach(c => {
       if (c && c.name) classMap[c.name.trim()] = c._id;
@@ -30,12 +40,13 @@ router.put('/promote', async (req, res) => {
 
     for (const student of students) {
       const failedSubjects = Number(student.failedSubjects || 0);
+
       if (failedSubjects >= 3) {
         skipped.push({ id: student._id, reason: 'failedSubjects >= 3' });
         continue;
       }
 
-      const className = student.classId && student.classId.name ? student.classId.name.trim() : null;
+      const className = student.classId?.name?.trim();
       if (!className) {
         skipped.push({ id: student._id, reason: 'no class assigned' });
         continue;
@@ -47,12 +58,15 @@ router.put('/promote', async (req, res) => {
         continue;
       }
 
+      // Determine next class
+      let nextClassName;
       if (currentIndex >= classOrder.length - 1) {
-        skipped.push({ id: student._id, reason: 'already in last class' });
-        continue;
+        // Already in last class "بكلوريا", stay there
+        nextClassName = classOrder[classOrder.length - 1];
+      } else {
+        nextClassName = classOrder[currentIndex + 1];
       }
 
-      const nextClassName = classOrder[currentIndex + 1].trim();
       const nextClassId = classMap[nextClassName];
       if (!nextClassId) {
         skipped.push({ id: student._id, reason: `next class "${nextClassName}" not found in DB` });

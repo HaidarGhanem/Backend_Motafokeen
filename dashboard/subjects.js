@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
         res.status(201).json({
             success: true, 
             data: newSubject, 
-            message: 'Subject created successfully'
+            message: 'تم إنشاء المادة بنجاح'
         });
     } catch (error) {
         res.status(500).json({
@@ -59,7 +59,7 @@ router.get('/', async (req, res) => {
         res.status(200).json({
             success: true, 
             data: subjects, 
-            message: 'Subjects fetched successfully'
+            message: 'تم استدعاء المواد بنجاح'
         });
     } catch (error) {
         res.status(500).json({
@@ -97,7 +97,7 @@ router.get('/by-class-semester', async (req, res) => {
         res.status(200).json({
             success: true,
             data: subjects,
-            message: 'Subjects fetched successfully'
+            message: 'تم استدعاء المواد بنجاح'
         });
     } catch (error) {
         res.status(500).json({
@@ -129,7 +129,7 @@ router.put('/:id', async (req, res) => {
         res.status(200).json({
             success: true, 
             data: updatedSubject, 
-            message: 'Subject updated successfully'
+            message: 'تم تعديل المادة بنجاح'
         });
     } catch (error) {
         res.status(500).json({
@@ -145,7 +145,7 @@ router.delete('/:id', async (req, res) => {
         await Subject.findByIdAndDelete(req.params.id);
         res.status(200).json({
             success: true, 
-            message: 'Subject deleted successfully'
+            message: 'تم حذف المادة بنجاح'
         });
     } catch (error) {
         res.status(500).json({
