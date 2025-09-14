@@ -127,4 +127,80 @@ router.post('/mark-attendance', async (req, res) => {
     }
 });
 
+// Get today's attendance summary for a subclass
+router.post('/subclass-attendance-summary', async (req, res) => {
+    try {
+        const { class: className, subclass: subclassName, date } = req.body;
+        const targetDate = date ? new Date(date) : new Date();
+
+        // Normalize to start and end of the day
+        const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+        const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+
+        // Find active academic year
+        const activeAcademicYear = await AcademicYear.findOne({ active: 1 });
+        if (!activeAcademicYear) {
+            return res.status(404).json({
+                success: false,
+                message: 'No active academic year found'
+            });
+        }
+
+        // Get class and subclass
+        const classInfo = await Class.findOne({ name: className });
+        if (!classInfo) {
+            return res.status(404).json({
+                success: false,
+                message: 'Class not found'
+            });
+        }
+
+        const subclassInfo = await Subclass.findOne({
+            name: subclassName,
+            classId: classInfo._id
+        });
+        if (!subclassInfo) {
+            return res.status(404).json({
+                success: false,
+                message: 'Subclass not found'
+            });
+        }
+
+        // Get students in subclass and active year
+        const students = await Student.find({
+            subclassId: subclassInfo._id,
+            academicYearId: activeAcademicYear._id
+        }).select('firstName lastName identifier absence');
+
+        // Check today's attendance for each student
+        const results = await Promise.all(students.map(async (student) => {
+            const todayAbsence = await Absence.findOne({
+                studentId: student._id,
+                date: { $gte: startOfDay, $lte: endOfDay }
+            });
+
+            return {
+                studentId: student._id,
+                identifier: student.identifier,
+                name: `${student.firstName} ${student.lastName}`,
+                todayStatus: todayAbsence ? 'absent' : 'present',
+                totalAbsences: student.absence || 0
+            };
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: results,
+            message: 'Attendance summary retrieved successfully'
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch attendance summary',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
