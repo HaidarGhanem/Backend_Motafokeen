@@ -3,7 +3,7 @@ const router = express.Router();
 const Student = require('../models/students'); 
 const Class = require('../models/classes');     
 const Marks = require('../models/marks');     
-const AcademicYear = require('../models/years'); 
+const AcademicYear = require('../models/year'); 
 
 const classOrder = [
   "السابع",
