@@ -6,7 +6,6 @@ const Class = require('../models/classes');
 const Subclass = require('../models/subclasses');
 const Admin = require('../models/admins');
 const AcademicYear = require('../models/year');
-const authorize = require('../functions/authorize');
 
 // Predefined list of Syrian cities
 const SYRIAN_CITIES = [
@@ -15,28 +14,36 @@ const SYRIAN_CITIES = [
     "الحسكة", "الرقة", "حماة", "القامشلي"
 ];
 
-// Get all statistics
+// Get all statistics (filtered by active year)
 router.get('/', async (req, res) => {
     try {
-        // 1. Get counts of all entities
+        // 1. Get active academic year
+        const yearInfo = await AcademicYear.findOne({ active: 1 }).lean();
+        if (!yearInfo) {
+            return res.status(404).json({
+                success: false,
+                message: 'لا يوجد عام دراسي مفعل حالياً'
+            });
+        }
+        const activeYearId = yearInfo._id;
+        const year = yearInfo.year;
+
+        // 2. Get counts
         const [studentCount, teacherCount, adminCount] = await Promise.all([
-            Student.countDocuments(),
+            Student.countDocuments({ academicYearId: activeYearId }),
             Teacher.countDocuments(),
             Admin.countDocuments()
         ]);
 
-        const yearInfo = await AcademicYear.findOne({ active: 1 })
-            .select('year -_id')
-            .lean();
-
-        const year = yearInfo ? yearInfo.year : null;
-
-        // 2. Get student distribution by class
+        // 3. Get student distribution by class
         const classes = await Class.find().lean();
         const classStats = await Promise.all(classes.map(async (classItem) => {
             const subclasses = await Subclass.find({ classId: classItem._id });
             const subclassIds = subclasses.map(s => s._id);
-            const count = await Student.countDocuments({ subclassId: { $in: subclassIds } });
+            const count = await Student.countDocuments({ 
+                subclassId: { $in: subclassIds },
+                academicYearId: activeYearId
+            });
             
             return {
                 className: classItem.name,
@@ -45,10 +52,11 @@ router.get('/', async (req, res) => {
             };
         }));
 
-        // 3. Get gender distribution
+        // 4. Get gender distribution
         const genderStats = await Student.aggregate([
             {
                 $match: {
+                    academicYearId: activeYearId,
                     gender: { $in: ["ذكر", "أنثى"] }
                 }
             },
@@ -73,10 +81,11 @@ router.get('/', async (req, res) => {
             }
         ]);
 
-        // 4. Get city distribution for the main endpoint (limited data)
+        // 5. Get city distribution (top 5 only)
         const cityStats = await Student.aggregate([
             {
                 $match: {
+                    academicYearId: activeYearId,
                     city: { $exists: true, $ne: "" }
                 }
             },
@@ -86,12 +95,8 @@ router.get('/', async (req, res) => {
                     count: { $sum: 1 }
                 }
             },
-            {
-                $sort: { count: -1 }
-            },
-            {
-                $limit: 5 // Only get top 5 cities for main endpoint
-            },
+            { $sort: { count: -1 } },
+            { $limit: 5 },
             {
                 $project: {
                     city: "$_id",
@@ -107,26 +112,24 @@ router.get('/', async (req, res) => {
             }
         ]);
 
-        // 4. Prepare response
-        const response = {
-            counts: {
-                students: studentCount,
-                teachers: teacherCount,
-                admins: adminCount,
-                yearName: year
-            },
-            studentDistribution: {
-                byClass: classStats,
-                byGender: genderStats,
-                byCity: cityStats, // Add city data to main endpoint
-                totalStudents: studentCount
-            }
-        };
-        
+        // 6. Response
         res.status(200).json({
             success: true,
             message: 'تم جلب الإحصائيات بنجاح',
-            data: response
+            data: {
+                counts: {
+                    students: studentCount,
+                    teachers: teacherCount,
+                    admins: adminCount,
+                    yearName: year
+                },
+                studentDistribution: {
+                    byClass: classStats,
+                    byGender: genderStats,
+                    byCity: cityStats,
+                    totalStudents: studentCount
+                }
+            }
         });
 
     } catch (error) {
@@ -139,16 +142,27 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Enhanced city distribution endpoint with predefined cities
+// City distribution endpoint (filtered by active year)
 router.get('/city-distribution', async (req, res) => {
     try {
-        // 1. Get total student count for percentages
-        const totalStudents = await Student.countDocuments();
+        // 1. Get active academic year
+        const yearInfo = await AcademicYear.findOne({ active: 1 }).lean();
+        if (!yearInfo) {
+            return res.status(404).json({
+                success: false,
+                message: 'لا يوجد عام دراسي مفعل حالياً'
+            });
+        }
+        const activeYearId = yearInfo._id;
+
+        // 2. Get total students for this year
+        const totalStudents = await Student.countDocuments({ academicYearId: activeYearId });
         
-        // 2. Get all cities from students
+        // 3. Get all city stats for this year
         const allCityStats = await Student.aggregate([
             {
                 $match: {
+                    academicYearId: activeYearId,
                     city: { $exists: true, $ne: "" }
                 }
             },
@@ -158,9 +172,7 @@ router.get('/city-distribution', async (req, res) => {
                     count: { $sum: 1 }
                 }
             },
-            {
-                $sort: { count: -1 }
-            },
+            { $sort: { count: -1 } },
             {
                 $project: {
                     city: "$_id",
@@ -176,13 +188,13 @@ router.get('/city-distribution', async (req, res) => {
             }
         ]);
 
-        // 3. Create a map for quick lookup
+        // 4. Map for quick lookup
         const cityMap = new Map();
         allCityStats.forEach(city => {
             cityMap.set(city.city, city);
         });
 
-        // 4. Create results for predefined Syrian cities
+        // 5. Predefined Syrian cities
         const syrianCityStats = SYRIAN_CITIES.map(cityName => {
             const cityData = cityMap.get(cityName);
             if (cityData) {
@@ -196,17 +208,16 @@ router.get('/city-distribution', async (req, res) => {
             }
         });
 
-        // 5. Get other cities (not in predefined list)
+        // 6. Other cities (not predefined)
         const otherCities = allCityStats.filter(city => 
             !SYRIAN_CITIES.includes(city.city)
         );
 
-        // Calculate total for other cities
         const otherCitiesTotal = otherCities.reduce((sum, city) => sum + city.count, 0);
         const otherCitiesPercentage = totalStudents > 0 ? 
             Math.round((otherCitiesTotal / totalStudents) * 100) : 0;
 
-        // 6. Prepare response
+        // 7. Response
         res.status(200).json({
             success: true,
             message: 'تم جلب توزع الطلاب حسب المدينة بنجاح',
