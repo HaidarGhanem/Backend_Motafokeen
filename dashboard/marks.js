@@ -4,17 +4,31 @@ const Subject = require('../models/subjects');
 const Student = require('../models/students');
 const Marks = require('../models/marks');
 const Class = require('../models/classes');
+const AcademicYear = require('../models/year');
+
+// Helper: get active academic year
+async function getActiveYear() {
+    return AcademicYear.findOne({ active: 1 }).lean();
+}
 
 // Create new mark
 router.post('/', async (req, res) => {
     try {
+        const activeYear = await getActiveYear();
+        if (!activeYear) {
+            return res.status(404).json({
+                success: false,
+                message: 'لا يوجد عام دراسي مفعل حالياً'
+            });
+        }
+
         const { id, class: className, subject, verbal, homeworks, activities, quiz, finalExam, semester } = req.body;
 
-        const studentInfo = await Student.findOne({ identifier: id });
+        const studentInfo = await Student.findOne({ identifier: id, academicYearId: activeYear._id });
         if (!studentInfo) {
             return res.status(404).json({
                 success: false,
-                message: 'Student not found'
+                message: 'Student not found for the active academic year'
             });
         }
 
@@ -141,15 +155,23 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// Get marks with flexible filters
+// Get marks with flexible filters (only active year students)
 router.post('/search', async (req, res) => {
     try {
+        const activeYear = await getActiveYear();
+        if (!activeYear) {
+            return res.status(404).json({
+                success: false,
+                message: 'لا يوجد عام دراسي مفعل حالياً'
+            });
+        }
+
         const { id, firstName, middleName, lastName, class: className, semester, subject } = req.body;
 
         let query = {};
 
         // Build student query if any student filters are provided
-        let studentQuery = {};
+        let studentQuery = { academicYearId: activeYear._id }; // restrict to active year
         if (id && id.trim() !== '') studentQuery.identifier = id.trim();
         if (firstName && firstName.trim() !== '') studentQuery.firstName = new RegExp(firstName.trim(), 'i');
         if (middleName && middleName.trim() !== '') studentQuery.middleName = new RegExp(middleName.trim(), 'i');
@@ -197,10 +219,11 @@ router.post('/search', async (req, res) => {
 
         // Fetch marks with populated data
         const marks = await Marks.find(query)
-            .populate('studentId', 'firstName middleName lastName identifier')
+            .populate('studentId', 'firstName middleName lastName identifier academicYearId')
             .populate('subjectId', 'name semester classId') 
             .select('verbal homeworks activities quiz finalExam total finalTotal studentId subjectId result')
             .sort({ createdAt: -1 });
+
         res.status(200).json({
             success: true,
             data: marks,
